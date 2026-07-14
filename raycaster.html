@@ -3,6 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ZEROPOINT">
 <title>ZEROPOINT</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -62,6 +66,12 @@ body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 #rotatePrompt p { font-size:13px; letter-spacing:1.5px; color:#aac; max-width:280px; line-height:1.6; margin:0; }
 #fsBtn { position:fixed; top:10px; right:10px; z-index:9998; width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:18px; display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 #fsBtn:active { background:rgba(0,204,255,.35); border-color:#00ccff; }
+#a2hsTip { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff; text-align:center; padding:24px; }
+#a2hsTip.show { display:flex; }
+#a2hsTip h2 { font-size:19px; color:#00ccff; letter-spacing:2px; text-shadow:0 0 16px #00ccff; margin:0; }
+#a2hsTip p { font-size:14px; color:#ccd; max-width:300px; line-height:1.8; margin:0; }
+#a2hsTip .share-ic { font-size:26px; }
+#a2hsTip button { margin-top:6px; padding:10px 30px; font-size:13px; font-weight:bold; background:linear-gradient(135deg,#0055aa,#00aaff); color:#fff; border:none; border-radius:8px; cursor:pointer; letter-spacing:2px; }
 #shopOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.93); z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:'Courier New',monospace; }
 #pauseOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
 #pauseOverlay h2 { font-size:52px; color:#00ccff; text-shadow:0 0 28px #00ccff; letter-spacing:8px; margin:0; font-family:'Courier New',monospace; }
@@ -119,6 +129,12 @@ body.coop-active #p2ControlHint { display:block; }
   <p>ZEROPOINT plays in landscape. Turn your phone sideways to continue.</p>
 </div>
 <button id="fsBtn" aria-label="Toggle fullscreen">&#10021;</button>
+<div id="a2hsTip">
+  <div class="share-ic">&#11014;&#65039;</div>
+  <h2>GO FULLSCREEN ON IPHONE</h2>
+  <p>Tap the <b>Share</b> button in Safari's toolbar, then choose <b>"Add to Home Screen."</b> Launching ZEROPOINT from the home screen icon hides Safari's bars completely.</p>
+  <button id="a2hsClose">GOT IT</button>
+</div>
 <div id="gc">
   <canvas id="c"></canvas>
   <div id="hud">
@@ -267,19 +283,36 @@ if(screen.orientation && screen.orientation.addEventListener){
 
 // ── FULLSCREEN TOGGLE (mobile) ──────────────────────────────
 const fsBtn = document.getElementById('fsBtn');
-fsBtn.style.display = (touchMode && document.documentElement.requestFullscreen) ? 'flex' : 'none';
-fsBtn.addEventListener('click', () => {
-  if(!document.fullscreenElement){
-    document.documentElement.requestFullscreen().then(() => {
-      if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
-    }).catch(()=>{});
-  } else {
-    document.exitFullscreen().catch(()=>{});
-  }
-});
-document.addEventListener('fullscreenchange', () => {
-  fsBtn.style.borderColor = document.fullscreenElement ? '#00ccff' : 'rgba(255,255,255,.25)';
-});
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+const hasFsApi = !!document.documentElement.requestFullscreen;
+
+if(isStandalone || !touchMode){
+  // Already launched from the home-screen icon (Safari bars are gone) — or not a touch device — no button needed.
+  fsBtn.style.display = 'none';
+} else if(hasFsApi){
+  fsBtn.style.display = 'flex';
+  fsBtn.addEventListener('click', () => {
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().then(() => {
+        if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+      }).catch(()=>{});
+    } else {
+      document.exitFullscreen().catch(()=>{});
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    fsBtn.style.borderColor = document.fullscreenElement ? '#00ccff' : 'rgba(255,255,255,.25)';
+  });
+} else if(isIOS){
+  // iPhone Safari has no Fullscreen API for regular pages — point the player at Add to Home Screen instead.
+  fsBtn.style.display = 'flex';
+  const tip = document.getElementById('a2hsTip');
+  fsBtn.addEventListener('click', () => tip.classList.add('show'));
+  document.getElementById('a2hsClose').addEventListener('click', () => tip.classList.remove('show'));
+} else {
+  fsBtn.style.display = 'none';
+}
 
 // ── FLOOR TEXTURE PREBAKE ──────────────────────────────────
 const FLOOR_PIX = (() => {
