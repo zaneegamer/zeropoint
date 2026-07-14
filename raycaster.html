@@ -67,6 +67,9 @@ body.touch-device .inv-key { display:none; }
 #rotatePrompt p { font-size:13px; letter-spacing:1.5px; color:#aac; max-width:280px; line-height:1.6; margin:0; }
 #fsBtn { position:fixed; top:10px; right:10px; z-index:9998; width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:18px; display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 #fsBtn:active { background:rgba(0,204,255,.35); border-color:#00ccff; }
+#updateBanner { position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:10000; display:none; align-items:center; gap:8px; background:linear-gradient(135deg,#ffcc00,#ff9900); color:#000; font-size:12px; font-weight:bold; letter-spacing:.5px; padding:8px 14px; border-radius:20px; box-shadow:0 2px 14px rgba(0,0,0,.5); cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#updateBanner.show { display:flex; }
+#updateBanner .ub-x { font-size:14px; padding:0 2px 0 6px; opacity:.65; }
 #a2hsTip { position:fixed; inset:0; background:rgba(0,0,0,.92); z-index:10000; display:none; flex-direction:column; align-items:center; justify-content:center; gap:16px; color:#fff; text-align:center; padding:24px; }
 #a2hsTip.show { display:flex; }
 #a2hsTip h2 { font-size:19px; color:#00ccff; letter-spacing:2px; text-shadow:0 0 16px #00ccff; margin:0; }
@@ -130,6 +133,7 @@ body.coop-active #p2ControlHint { display:block; }
   <p>ZEROPOINT plays in landscape. Turn your phone sideways to continue.</p>
 </div>
 <button id="fsBtn" aria-label="Toggle fullscreen">&#10021;</button>
+<div id="updateBanner">&#8635; UPDATE AVAILABLE &mdash; TAP TO RELOAD<span class="ub-x">&#10005;</span></div>
 <div id="a2hsTip">
   <div class="share-ic">&#11014;&#65039;</div>
   <h2>GO FULLSCREEN ON IPHONE</h2>
@@ -253,6 +257,38 @@ const HALF_H = H >> 1;
 const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 const hasFsApi = !!document.documentElement.requestFullscreen; // true on Android Chrome; false on iPhone Safari (Apple restriction, no JS workaround)
 let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doResize() call below)
+
+// ── UPDATE CHECK ───────────────────────────────────────────
+// BUILD_VERSION and version.json are bumped together on every deploy (see git log).
+// Home-screen/standalone launches can hold a stale cached copy of this page far longer
+// than a normal browser tab, so this polls a tiny sibling file for a newer build and
+// offers a one-tap reload instead of silently running outdated code.
+const BUILD_VERSION = '2026071401';
+let updateBannerShown = false, updateBannerDismissed = false;
+function checkForUpdate(){
+  if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
+  fetch('version.json?t='+Date.now(), {cache:'no-store'})
+    .then(r=>r.ok?r.json():null)
+    .then(data=>{
+      if(data && data.build && data.build!==BUILD_VERSION){
+        updateBannerShown = true;
+        document.getElementById('updateBanner').classList.add('show');
+      }
+    })
+    .catch(()=>{});
+}
+document.getElementById('updateBanner').addEventListener('click', e=>{
+  if(e.target.classList.contains('ub-x')){
+    e.stopPropagation();
+    document.getElementById('updateBanner').classList.remove('show');
+    updateBannerDismissed = true;
+    return;
+  }
+  location.href = location.pathname + '?v=' + Date.now();
+});
+window.addEventListener('load', ()=>setTimeout(checkForUpdate, 1500));
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkForUpdate(); });
+setInterval(checkForUpdate, 5*60*1000);
 
 // ── LEADERBOARD ────────────────────────────────────────────
 function loadLeaderboard(){ try{ return JSON.parse(localStorage.getItem('ts3d_lb')||'[]'); }catch(e){ return []; } }
