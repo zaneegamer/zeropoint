@@ -20,10 +20,7 @@ body { background:#000; display:flex; justify-content:center; align-items:center
 .tc-btn:active { background:rgba(0,204,255,.3); border-color:#00ccff; }
 #tcFire { right:24px; bottom:34px; width:88px; height:88px; background:rgba(255,60,60,.16); border-color:rgba(255,90,90,.45); font-size:13px; }
 #tcFire:active { background:rgba(255,60,60,.4); border-color:#ff5555; }
-#tcReload { right:126px; bottom:98px; width:52px; height:52px; }
-#tcGrenade { right:126px; bottom:32px; width:52px; height:52px; }
-#tcGrenade.empty { opacity:0.35; }
-.tc-count { position:absolute; top:-4px; right:-4px; background:#ffcc00; color:#000; font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+#tcReload { right:126px; bottom:32px; width:52px; height:52px; }
 #tcPause { left:16px; top:16px; width:40px; height:40px; font-size:16px; }
 canvas { display:block; }
 #hud { position:absolute; top:0; left:0; width:100%; pointer-events:none; }
@@ -34,8 +31,11 @@ canvas { display:block; }
 body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 .stat span { color:#00ccff; }
 #rlBar { position:absolute; bottom:82px; left:50%; transform:translateX(-50%); width:150px; display:none; flex-direction:column; align-items:center; gap:3px; pointer-events:none; }
-#inventory { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:5px; pointer-events:none; }
+#inventory { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:5px; pointer-events:none; z-index:41; }
 .inv-slot { width:50px; height:54px; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.13); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; position:relative; }
+.inv-slot.armed { border-color:#00ffcc; box-shadow:0 0 12px #00ffccaa; animation:invArmPulse 0.9s ease-in-out infinite; }
+@keyframes invArmPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.1); } }
+body.touch-device .inv-key { display:none; }
 .inv-lbl { font-size:8px; color:#aaa; letter-spacing:1px; font-weight:bold; }
 .inv-key { position:absolute; top:3px; left:4px; font-size:7px; color:#555; font-weight:bold; }
 #inv-gun { border-color:rgba(255,238,68,.35); }
@@ -207,7 +207,6 @@ body.coop-active #p2ControlHint { display:block; }
     <div class="tc-joy-base" id="tcJoyBase"><div class="tc-joy-stick" id="tcJoyStick"></div></div>
     <div class="tc-btn" id="tcFire">FIRE</div>
     <div class="tc-btn" id="tcReload">RLD</div>
-    <div class="tc-btn" id="tcGrenade">NADE<span class="tc-count" id="tcGrenCount">0</span></div>
     <div class="tc-btn" id="tcPause">II</div>
   </div>
   <div id="theme"></div>
@@ -910,8 +909,38 @@ if(touchMode){
   let lookId=null, lookLastX=0, lookLastY=0;
   let lastTapT=0, lastTapX=0, lastTapY=0;
   const DBLTAP_WINDOW=300, DBLTAP_MAX_DIST=70;
+  let tapPointerId=null, tapDownT=0, tapDownX=0, tapDownY=0;
+  const TAP_MAX_TIME=250, TAP_MAX_DIST=14;
 
   document.body.classList.add('touch-device');
+
+  // ── Arm-an-item-then-tap-to-use ──
+  let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren'
+  const ARMABLE={ med:()=>medkits, pot:()=>potions, shc:()=>shieldCells, gren:()=>heldGrenades };
+  function updateArmedUI(){
+    document.getElementById('inv-med').classList.toggle('armed', tcArmedItem==='med');
+    document.getElementById('inv-pot-0').classList.toggle('armed', tcArmedItem==='pot');
+    document.getElementById('inv-shc').classList.toggle('armed', tcArmedItem==='shc');
+    document.getElementById('inv-gren').classList.toggle('armed', tcArmedItem==='gren');
+  }
+  function tcUseArmedItem(){
+    if(tcArmedItem==='med') useMedkit();
+    else if(tcArmedItem==='pot') usePotion();
+    else if(tcArmedItem==='shc') useShieldCell();
+    else if(tcArmedItem==='gren') throwGrenade();
+    tcArmedItem=null;
+    updateArmedUI();
+  }
+  function armSlot(id,type){
+    document.getElementById(id).addEventListener('pointerdown', e=>{
+      e.stopPropagation();
+      if(gs!=='play') return;
+      if(tcArmedItem===type){ tcArmedItem=null; }
+      else if(ARMABLE[type]()>0){ tcArmedItem=type; }
+      updateArmedUI();
+    });
+  }
+  armSlot('inv-med','med'); armSlot('inv-pot-0','pot'); armSlot('inv-shc','shc'); armSlot('inv-gren','gren');
 
   function setJoyVec(dx,dy){
     K['KeyW']=dy<-JOY_DEADZONE; K['KeyS']=dy>JOY_DEADZONE;
@@ -923,6 +952,7 @@ if(touchMode){
   lookLayer.addEventListener('pointerdown', e=>{
     if(gs!=='play'&&gs!=='aim') return;
     const nowT=e.timeStamp||performance.now();
+    if(tapPointerId===null){ tapPointerId=e.pointerId; tapDownT=nowT; tapDownX=e.clientX; tapDownY=e.clientY; }
     if(nowT-lastTapT<DBLTAP_WINDOW && Math.hypot(e.clientX-lastTapX,e.clientY-lastTapY)<DBLTAP_MAX_DIST){
       if(gs==='play' && dashCd===0) triggerDash();
       lastTapT=0;
@@ -959,6 +989,12 @@ if(touchMode){
   function releaseTouch(e){
     if(e.pointerId===joyId){ joyId=null; clearJoy(); joyStick.style.transform='translate(0,0)'; }
     else if(e.pointerId===lookId){ lookId=null; }
+    if(e.pointerId===tapPointerId){
+      const dt=(e.timeStamp||performance.now())-tapDownT;
+      const dist=Math.hypot(e.clientX-tapDownX, e.clientY-tapDownY);
+      if(tcArmedItem && gs==='play' && dt<TAP_MAX_TIME && dist<TAP_MAX_DIST) tcUseArmedItem();
+      tapPointerId=null;
+    }
   }
   lookLayer.addEventListener('pointerup', releaseTouch);
   lookLayer.addEventListener('pointercancel', releaseTouch);
@@ -978,7 +1014,6 @@ if(touchMode){
   }
   holdButton(document.getElementById('tcFire'), ()=>{ if(gs==='play'||gs==='aim') tryShoot(); }, {repeatMs:130});
   holdButton(document.getElementById('tcReload'), ()=>{ if((gs==='play'||gs==='aim')&&!reloading) startReload(); });
-  holdButton(document.getElementById('tcGrenade'), ()=>{ if(gs==='play'&&heldGrenades>0) throwGrenade(); });
   holdButton(document.getElementById('tcPause'), ()=>{ if(gs==='play'||gs==='aim') pauseGame(); else if(gs==='pause') resumeGame(); });
 
   setInterval(()=>{ tcEl.style.display=(gs==='play'||gs==='aim')?'block':'none'; }, 200);
@@ -4183,8 +4218,6 @@ function updateInventoryUI(){
   document.getElementById('inv-shc').style.opacity=shieldCells>0?'1':'0.4';
   document.getElementById('inv-gren-n').textContent=heldGrenades;
   document.getElementById('inv-gren').style.opacity=heldGrenades>0?'1':'0.4';
-  document.getElementById('tcGrenCount').textContent=heldGrenades;
-  document.getElementById('tcGrenade').classList.toggle('empty', heldGrenades===0);
   document.getElementById('inv-trt-n').textContent=heldTurrets;
   document.getElementById('inv-trt').style.opacity=heldTurrets>0?'1':'0.4';
 }
