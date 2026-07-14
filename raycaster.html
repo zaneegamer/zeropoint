@@ -60,6 +60,8 @@ body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 @keyframes rotateHint { 0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);} }
 #rotatePrompt h2 { font-size:20px; color:#00ccff; letter-spacing:3px; text-shadow:0 0 16px #00ccff; margin:0; }
 #rotatePrompt p { font-size:13px; letter-spacing:1.5px; color:#aac; max-width:280px; line-height:1.6; margin:0; }
+#fsBtn { position:fixed; top:10px; right:10px; z-index:9998; width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:18px; display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+#fsBtn:active { background:rgba(0,204,255,.35); border-color:#00ccff; }
 #shopOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.93); z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:'Courier New',monospace; }
 #pauseOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
 #pauseOverlay h2 { font-size:52px; color:#00ccff; text-shadow:0 0 28px #00ccff; letter-spacing:8px; margin:0; font-family:'Courier New',monospace; }
@@ -116,6 +118,7 @@ body.coop-active #p2ControlHint { display:block; }
   <h2>ROTATE YOUR DEVICE</h2>
   <p>ZEROPOINT plays in landscape. Turn your phone sideways to continue.</p>
 </div>
+<button id="fsBtn" aria-label="Toggle fullscreen">&#10021;</button>
 <div id="gc">
   <canvas id="c"></canvas>
   <div id="hud">
@@ -261,6 +264,22 @@ window.addEventListener('orientationchange', () => setTimeout(doResize, 120));
 if(screen.orientation && screen.orientation.addEventListener){
   screen.orientation.addEventListener('change', () => setTimeout(doResize, 120));
 }
+
+// ── FULLSCREEN TOGGLE (mobile) ──────────────────────────────
+const fsBtn = document.getElementById('fsBtn');
+fsBtn.style.display = (touchMode && document.documentElement.requestFullscreen) ? 'flex' : 'none';
+fsBtn.addEventListener('click', () => {
+  if(!document.fullscreenElement){
+    document.documentElement.requestFullscreen().then(() => {
+      if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+    }).catch(()=>{});
+  } else {
+    document.exitFullscreen().catch(()=>{});
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  fsBtn.style.borderColor = document.fullscreenElement ? '#00ccff' : 'rgba(255,255,255,.25)';
+});
 
 // ── FLOOR TEXTURE PREBAKE ──────────────────────────────────
 const FLOOR_PIX = (() => {
