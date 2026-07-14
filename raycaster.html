@@ -250,6 +250,25 @@ body.coop-active #p2ControlHint { display:block; }
 </div>
 
 <script>
+// ── FATAL ERROR OVERLAY (no console access on mobile) ───────
+function showFatalError(msg){
+  let el=document.getElementById('fatalErr');
+  if(!el){
+    el=document.createElement('div');
+    el.id='fatalErr';
+    el.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:20000;background:#300;color:#f88;font-family:"Courier New",monospace;font-size:11px;padding:10px 14px;border:2px solid #f00;border-radius:8px;max-width:85vw;white-space:pre-wrap;text-align:left;pointer-events:auto';
+    el.addEventListener('pointerdown',()=>el.remove());
+    document.body.appendChild(el);
+  }
+  el.textContent=(el.textContent?el.textContent+'\n---\n':'')+msg;
+}
+window.addEventListener('error', e=>{
+  showFatalError((e.message||'error')+' @ '+(e.filename?e.filename.split('/').pop():'?')+':'+e.lineno);
+});
+window.addEventListener('unhandledrejection', e=>{
+  showFatalError('promise rejection: '+(e.reason&&e.reason.message?e.reason.message:e.reason));
+});
+
 // ── CANVAS SETUP ───────────────────────────────────────────
 const canvas = document.getElementById('c');
 let ctx = canvas.getContext('2d');
@@ -266,7 +285,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071406';
+const BUILD_VERSION = '2026071407';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -4811,6 +4830,7 @@ function playExplosionSound() {
 function playScream() {
   try {
     const ac = new AudioContext();
+    if(ac.state==='suspended') ac.resume().catch(()=>{}); // gameOver() fires from a damage tick, not a tap — iOS Safari needs an explicit resume() here
     const master = ac.createGain();
     master.gain.value = 2.5; // loud
     master.gain.value*=masterVol; master.connect(ac.destination);
