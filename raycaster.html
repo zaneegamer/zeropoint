@@ -54,6 +54,12 @@ body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 #announce { position:absolute; top:28%; left:50%; transform:translate(-50%,-50%); font-size:30px; font-weight:bold; color:#00ffcc; text-shadow:0 0 22px #00ffcc; pointer-events:none; opacity:0; transition:opacity .5s; letter-spacing:4px; text-align:center; white-space:nowrap; }
 #crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); pointer-events:none; display:none; }
 #lockMsg { position:absolute; bottom:75px; left:50%; transform:translateX(-50%); color:#778; font-size:11px; pointer-events:none; letter-spacing:1px; }
+#rotatePrompt { position:fixed; inset:0; background:#000; z-index:9999; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; color:#fff; text-align:center; padding:20px; }
+#rotatePrompt.show { display:flex; }
+.rotate-icon { width:60px; height:60px; border:3px solid #00ccff; border-radius:8px; box-shadow:0 0 24px #00ccff88; animation:rotateHint 1.6s ease-in-out infinite; }
+@keyframes rotateHint { 0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);} }
+#rotatePrompt h2 { font-size:20px; color:#00ccff; letter-spacing:3px; text-shadow:0 0 16px #00ccff; margin:0; }
+#rotatePrompt p { font-size:13px; letter-spacing:1.5px; color:#aac; max-width:280px; line-height:1.6; margin:0; }
 #shopOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.93); z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:'Courier New',monospace; }
 #pauseOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
 #pauseOverlay h2 { font-size:52px; color:#00ccff; text-shadow:0 0 28px #00ccff; letter-spacing:8px; margin:0; font-family:'Courier New',monospace; }
@@ -105,6 +111,11 @@ body.coop-active #p2ControlHint { display:block; }
 </style>
 </head>
 <body>
+<div id="rotatePrompt">
+  <div class="rotate-icon"></div>
+  <h2>ROTATE YOUR DEVICE</h2>
+  <p>ZEROPOINT plays in landscape. Turn your phone sideways to continue.</p>
+</div>
 <div id="gc">
   <canvas id="c"></canvas>
   <div id="hud">
@@ -221,6 +232,8 @@ let ctx = canvas.getContext('2d');
 const W = 800, H = 560;
 canvas.width = W; canvas.height = H;
 const HALF_H = H >> 1;
+const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
+let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doResize() call below)
 
 // ── LEADERBOARD ────────────────────────────────────────────
 function loadLeaderboard(){ try{ return JSON.parse(localStorage.getItem('ts3d_lb')||'[]'); }catch(e){ return []; } }
@@ -233,16 +246,21 @@ function addToLeaderboard(sc,wv){
   saveLeaderboard(lb);
 }
 
-(function resize() {
+function doResize() {
   const s = Math.min(window.innerWidth / (W + 4), window.innerHeight / (H + 4));
   const g = document.getElementById('gc');
   g.style.cssText = `transform:scale(${s});transform-origin:center;width:${W}px;height:${H}px`;
-})();
-window.addEventListener('resize', () => {
-  const s = Math.min(window.innerWidth / (W + 4), window.innerHeight / (H + 4));
-  const g = document.getElementById('gc');
-  g.style.cssText = `transform:scale(${s});transform-origin:center;width:${W}px;height:${H}px`;
-});
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const rp = document.getElementById('rotatePrompt');
+  rp.classList.toggle('show', touchMode && isPortrait);
+  if(touchMode && isPortrait && (gs==='play'||gs==='aim')) pauseGame();
+}
+doResize();
+window.addEventListener('resize', doResize);
+window.addEventListener('orientationchange', () => setTimeout(doResize, 120));
+if(screen.orientation && screen.orientation.addEventListener){
+  screen.orientation.addEventListener('change', () => setTimeout(doResize, 120));
+}
 
 // ── FLOOR TEXTURE PREBAKE ──────────────────────────────────
 const FLOOR_PIX = (() => {
@@ -747,10 +765,20 @@ const P = { x:0, y:0, angle:0, speed:2.5 };
 const K = {};
 let mouseDX = 0, pointerLocked = false, isZooming = false;
 let jumpscareTimer = 0; // frames remaining for jumpscare
-const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 function requestGameLock(){
   // Touch devices have no Pointer Lock cursor to capture — just mark input as "live" and hide the hint.
-  if(touchMode){ pointerLocked=true; document.getElementById('lockMsg').style.display='none'; }
+  if(touchMode){
+    pointerLocked=true; document.getElementById('lockMsg').style.display='none';
+    // Best-effort: fullscreen + landscape lock (Android Chrome supports both; iOS Safari lacks the APIs, so this silently no-ops there).
+    const el = document.documentElement;
+    if(el.requestFullscreen){
+      el.requestFullscreen().then(()=>{
+        if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+      }).catch(()=>{});
+    } else if(screen.orientation && screen.orientation.lock){
+      screen.orientation.lock('landscape').catch(()=>{});
+    }
+  }
   else canvas.requestPointerLock();
 }
 
@@ -883,7 +911,6 @@ if(touchMode){
 }
 
 // ── GAME STATE ─────────────────────────────────────────────
-let gs = 'menu';
 let score=0, hp=100, shield=100, wave=1, ammo=8, gunLevel=0, medkits=0, potions=0;
 let reloading=false, rlStart=0;
 let killed=0, needed=10, spawnCD=90, spawnInt=120;
