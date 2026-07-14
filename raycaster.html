@@ -21,7 +21,6 @@ body { background:#000; display:flex; justify-content:center; align-items:center
 #tcFire { right:24px; bottom:34px; width:88px; height:88px; background:rgba(255,60,60,.16); border-color:rgba(255,90,90,.45); font-size:13px; }
 #tcFire:active { background:rgba(255,60,60,.4); border-color:#ff5555; }
 #tcReload { right:126px; bottom:98px; width:52px; height:52px; }
-#tcDash { right:24px; bottom:132px; width:52px; height:52px; }
 #tcGrenade { right:126px; bottom:32px; width:52px; height:52px; }
 #tcPause { left:16px; top:16px; width:40px; height:40px; font-size:16px; }
 canvas { display:block; }
@@ -206,7 +205,6 @@ body.coop-active #p2ControlHint { display:block; }
     <div class="tc-joy-base" id="tcJoyBase"><div class="tc-joy-stick" id="tcJoyStick"></div></div>
     <div class="tc-btn" id="tcFire">FIRE</div>
     <div class="tc-btn" id="tcReload">RLD</div>
-    <div class="tc-btn" id="tcDash">DASH</div>
     <div class="tc-btn" id="tcGrenade">NADE</div>
     <div class="tc-btn" id="tcPause">II</div>
   </div>
@@ -894,6 +892,8 @@ if(touchMode){
   const TOUCH_LOOK_SENS=5.5, JOY_MAX=42, JOY_DEADZONE=10;
   let joyId=null, joyOriginX=0, joyOriginY=0;
   let lookId=null, lookLastX=0, lookLastY=0;
+  let lastTapT=0, lastTapX=0, lastTapY=0;
+  const DBLTAP_WINDOW=300, DBLTAP_MAX_DIST=70;
 
   document.body.classList.add('touch-device');
 
@@ -906,6 +906,13 @@ if(touchMode){
   const lookLayer=tcEl.querySelector('.tc-look');
   lookLayer.addEventListener('pointerdown', e=>{
     if(gs!=='play'&&gs!=='aim') return;
+    const nowT=e.timeStamp||performance.now();
+    if(nowT-lastTapT<DBLTAP_WINDOW && Math.hypot(e.clientX-lastTapX,e.clientY-lastTapY)<DBLTAP_MAX_DIST){
+      if(gs==='play' && dashCd===0) triggerDash();
+      lastTapT=0;
+    } else {
+      lastTapT=nowT; lastTapX=e.clientX; lastTapY=e.clientY;
+    }
     const rect=canvas.getBoundingClientRect();
     const relX=(e.clientX-rect.left)/rect.width;
     if(relX<0.42 && joyId===null){
@@ -955,7 +962,6 @@ if(touchMode){
   }
   holdButton(document.getElementById('tcFire'), ()=>{ if(gs==='play'||gs==='aim') tryShoot(); }, {repeatMs:130});
   holdButton(document.getElementById('tcReload'), ()=>{ if((gs==='play'||gs==='aim')&&!reloading) startReload(); });
-  holdButton(document.getElementById('tcDash'), ()=>{ if(gs==='play'&&dashCd===0) triggerDash(); });
   holdButton(document.getElementById('tcGrenade'), ()=>{ if(gs==='play'&&heldGrenades>0) throwGrenade(); });
   holdButton(document.getElementById('tcPause'), ()=>{ if(gs==='play'||gs==='aim') pauseGame(); else if(gs==='pause') resumeGame(); });
 
