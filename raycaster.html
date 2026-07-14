@@ -67,6 +67,7 @@ body.touch-device .inv-key { display:none; }
 #rotatePrompt p { font-size:13px; letter-spacing:1.5px; color:#aac; max-width:280px; line-height:1.6; margin:0; }
 #fsBtn { position:fixed; top:10px; right:10px; z-index:9998; width:38px; height:38px; border-radius:8px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.25); color:#fff; font-size:18px; display:none; align-items:center; justify-content:center; cursor:pointer; -webkit-tap-highlight-color:transparent; }
 #fsBtn:active { background:rgba(0,204,255,.35); border-color:#00ccff; }
+#tcDebug { position:fixed; top:6px; left:6px; z-index:10001; background:rgba(0,0,0,.75); color:#0f0; font-family:'Courier New',monospace; font-size:9px; line-height:1.4; padding:4px 6px; border-radius:4px; pointer-events:none; white-space:pre; max-width:70vw; }
 #updateBanner { position:fixed; top:8px; left:50%; transform:translateX(-50%); z-index:10000; display:none; align-items:center; gap:8px; background:linear-gradient(135deg,#ffcc00,#ff9900); color:#000; font-size:12px; font-weight:bold; letter-spacing:.5px; padding:8px 14px; border-radius:20px; box-shadow:0 2px 14px rgba(0,0,0,.5); cursor:pointer; -webkit-tap-highlight-color:transparent; }
 #updateBanner.show { display:flex; }
 #updateBanner .ub-x { font-size:14px; padding:0 2px 0 6px; opacity:.65; }
@@ -134,6 +135,7 @@ body.coop-active #p2ControlHint { display:block; }
 </div>
 <button id="fsBtn" aria-label="Toggle fullscreen">&#10021;</button>
 <div id="updateBanner">&#8635; UPDATE AVAILABLE &mdash; TAP TO RELOAD<span class="ub-x">&#10005;</span></div>
+<div id="tcDebug"></div>
 <div id="a2hsTip">
   <div class="share-ic">&#11014;&#65039;</div>
   <h2>GO FULLSCREEN ON IPHONE</h2>
@@ -263,7 +265,7 @@ let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doRe
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071402';
+const BUILD_VERSION = '2026071403';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -950,6 +952,16 @@ if(touchMode){
 
   document.body.classList.add('touch-device');
 
+  // TEMP DEBUG — remove once mobile arming bug is found
+  const tcDebugEl=document.getElementById('tcDebug');
+  const tcDebugLines=[];
+  function tcDebug(msg){
+    tcDebugLines.push(msg);
+    if(tcDebugLines.length>6) tcDebugLines.shift();
+    tcDebugEl.textContent=tcDebugLines.join('\n');
+  }
+  tcDebug('touch controls init, gs='+gs);
+
   // ── Arm-an-item-then-tap-to-use ──
   let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren'
   const ARMABLE={ med:()=>medkits, pot:()=>potions, shc:()=>shieldCells, gren:()=>heldGrenades };
@@ -972,10 +984,12 @@ if(touchMode){
     el.style.pointerEvents='auto'; // #inventory has pointer-events:none, which is inherited — opt this slot back in
     el.addEventListener('pointerdown', e=>{
       e.stopPropagation();
+      tcDebug('SLOT tap '+type+' gs='+gs+' cnt='+ARMABLE[type]());
       if(gs!=='play') return;
       if(tcArmedItem===type){ tcArmedItem=null; }
       else if(ARMABLE[type]()>0){ tcArmedItem=type; }
       updateArmedUI();
+      tcDebug('  -> armed='+tcArmedItem);
     });
   }
   armSlot('inv-med','med'); armSlot('inv-pot-0','pot'); armSlot('inv-shc','shc'); armSlot('inv-gren','gren');
@@ -1030,6 +1044,7 @@ if(touchMode){
     if(e.pointerId===tapPointerId){
       const dt=(e.timeStamp||performance.now())-tapDownT;
       const dist=Math.hypot(e.clientX-tapDownX, e.clientY-tapDownY);
+      tcDebug('SCREEN tap dt='+Math.round(dt)+' dist='+Math.round(dist)+' armed='+tcArmedItem);
       if(tcArmedItem && gs==='play' && dt<TAP_MAX_TIME && dist<TAP_MAX_DIST) tcUseArmedItem();
       tapPointerId=null;
     }
