@@ -22,6 +22,8 @@ body { background:#000; display:flex; justify-content:center; align-items:center
 #tcFire:active { background:rgba(255,60,60,.4); border-color:#ff5555; }
 #tcReload { right:126px; bottom:98px; width:52px; height:52px; }
 #tcGrenade { right:126px; bottom:32px; width:52px; height:52px; }
+#tcGrenade.empty { opacity:0.35; }
+.tc-count { position:absolute; top:-4px; right:-4px; background:#ffcc00; color:#000; font-size:10px; font-weight:bold; min-width:16px; height:16px; border-radius:8px; display:flex; align-items:center; justify-content:center; padding:0 4px; }
 #tcPause { left:16px; top:16px; width:40px; height:40px; font-size:16px; }
 canvas { display:block; }
 #hud { position:absolute; top:0; left:0; width:100%; pointer-events:none; }
@@ -205,7 +207,7 @@ body.coop-active #p2ControlHint { display:block; }
     <div class="tc-joy-base" id="tcJoyBase"><div class="tc-joy-stick" id="tcJoyStick"></div></div>
     <div class="tc-btn" id="tcFire">FIRE</div>
     <div class="tc-btn" id="tcReload">RLD</div>
-    <div class="tc-btn" id="tcGrenade">NADE</div>
+    <div class="tc-btn" id="tcGrenade">NADE<span class="tc-count" id="tcGrenCount">0</span></div>
     <div class="tc-btn" id="tcPause">II</div>
   </div>
   <div id="theme"></div>
@@ -4181,6 +4183,8 @@ function updateInventoryUI(){
   document.getElementById('inv-shc').style.opacity=shieldCells>0?'1':'0.4';
   document.getElementById('inv-gren-n').textContent=heldGrenades;
   document.getElementById('inv-gren').style.opacity=heldGrenades>0?'1':'0.4';
+  document.getElementById('tcGrenCount').textContent=heldGrenades;
+  document.getElementById('tcGrenade').classList.toggle('empty', heldGrenades===0);
   document.getElementById('inv-trt-n').textContent=heldTurrets;
   document.getElementById('inv-trt').style.opacity=heldTurrets>0?'1':'0.4';
 }
