@@ -259,13 +259,14 @@ const HALF_H = H >> 1;
 const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 const hasFsApi = !!document.documentElement.requestFullscreen; // true on Android Chrome; false on iPhone Safari (Apple restriction, no JS workaround)
 let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doResize() call below)
+let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, also read by drawArmedItem()
 
 // ── UPDATE CHECK ───────────────────────────────────────────
 // BUILD_VERSION and version.json are bumped together on every deploy (see git log).
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071404';
+const BUILD_VERSION = '2026071405';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -963,7 +964,6 @@ if(touchMode){
   tcDebug('touch controls init, gs='+gs);
 
   // ── Arm-an-item-then-tap-to-use ──
-  let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren'
   const ARMABLE={ med:()=>medkits, pot:()=>potions, shc:()=>shieldCells, gren:()=>heldGrenades };
   function updateArmedUI(){
     document.getElementById('inv-med').classList.toggle('armed', tcArmedItem==='med');
@@ -3287,6 +3287,56 @@ function drawWeapon() {
     ctx.beginPath(); ctx.arc(muzzleX, muzzleY, fl*5, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur=0; ctx.globalAlpha=1;
   }
+  ctx.restore();
+}
+
+// ── ARMED ITEM (held in off-hand while an item is armed on mobile) ──
+function drawArmedItem(){
+  if(!touchMode || !tcArmedItem) return;
+  if(thirdPerson && !isZooming) return;
+  if(isZooming) return;
+  const isMoving = !!(K['KeyW']||K['KeyS']||K['KeyA']||K['KeyD']);
+  const bobY = isMoving ? Math.sin(bobT)*7 : 0;
+  const bobX = isMoving ? Math.cos(bobT*0.5)*4 : 0;
+  const ix = (coopMode?(W>>2):(W>>1)) - 150 + bobX, iy = H - 50 + bobY;
+  ctx.save();
+  ctx.translate(ix, iy);
+  // Forearm/sleeve stub so the item reads as "held" rather than floating
+  ctx.fillStyle='#8a3c04';
+  ctx.beginPath(); ctx.roundRect(-30,10,60,60,[10,10,0,0]); ctx.fill();
+  switch(tcArmedItem){
+    case 'med': {
+      ctx.shadowColor='#ff3333'; ctx.shadowBlur=12;
+      ctx.fillStyle='#e8e8e8';
+      ctx.beginPath(); ctx.roundRect(-22,-22,44,44,7); ctx.fill();
+      ctx.shadowBlur=0;
+      ctx.fillStyle='#cc1111';
+      ctx.fillRect(-15,-5,30,10);
+      ctx.fillRect(-5,-15,10,30);
+      break; }
+    case 'pot': {
+      ctx.shadowColor='#44aaff'; ctx.shadowBlur=12;
+      const g=ctx.createLinearGradient(0,-26,0,26);
+      g.addColorStop(0,'#1a55dd'); g.addColorStop(1,'#55aaff');
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.roundRect(-13,-26,26,52,[6,6,13,13]); ctx.fill();
+      break; }
+    case 'shc': {
+      ctx.shadowColor='#44aaff'; ctx.shadowBlur=12;
+      const g=ctx.createRadialGradient(-7,-7,3,0,0,23);
+      g.addColorStop(0,'#66ccff'); g.addColorStop(1,'#1144aa');
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.arc(0,0,22,0,Math.PI*2); ctx.fill();
+      break; }
+    case 'gren': {
+      ctx.shadowColor='#66cc00'; ctx.shadowBlur=12;
+      const g=ctx.createLinearGradient(0,-20,0,20);
+      g.addColorStop(0,'#336600'); g.addColorStop(1,'#55aa00');
+      ctx.fillStyle=g;
+      ctx.beginPath(); ctx.roundRect(-11,-20,22,40,[4,4,9,9]); ctx.fill();
+      break; }
+  }
+  ctx.shadowBlur=0;
   ctx.restore();
 }
 
@@ -6128,6 +6178,7 @@ function loop(){
   }
 
   drawWeapon();
+  drawArmedItem();
   drawScope();
   drawGameModeHUD();
   if(coopMode) drawMinimap();
