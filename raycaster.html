@@ -250,6 +250,7 @@ const W = 800, H = 560;
 canvas.width = W; canvas.height = H;
 const HALF_H = H >> 1;
 const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
+const hasFsApi = !!document.documentElement.requestFullscreen; // true on Android Chrome; false on iPhone Safari (Apple restriction, no JS workaround)
 let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doResize() call below)
 
 // ── LEADERBOARD ────────────────────────────────────────────
@@ -271,6 +272,20 @@ function doResize() {
   const rp = document.getElementById('rotatePrompt');
   rp.classList.toggle('show', touchMode && isPortrait);
   if(touchMode && isPortrait && (gs==='play'||gs==='aim')) pauseGame();
+  if(touchMode && !isPortrait && hasFsApi && !document.fullscreenElement) armFsOnNextTouch();
+}
+let fsArmed=false;
+function armFsOnNextTouch(){
+  if(fsArmed) return;
+  fsArmed=true;
+  document.addEventListener('pointerdown', function goFs(){
+    fsArmed=false;
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen().then(()=>{
+        if(screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+      }).catch(()=>{});
+    }
+  }, {once:true});
 }
 doResize();
 window.addEventListener('resize', doResize);
@@ -283,7 +298,6 @@ if(screen.orientation && screen.orientation.addEventListener){
 const fsBtn = document.getElementById('fsBtn');
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-const hasFsApi = !!document.documentElement.requestFullscreen;
 
 if(isStandalone || !touchMode){
   // Already launched from the home-screen icon (Safari bars are gone) — or not a touch device — no button needed.
