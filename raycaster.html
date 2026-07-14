@@ -266,7 +266,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071405';
+const BUILD_VERSION = '2026071406';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -5882,7 +5882,10 @@ function loop(){
     requestAnimationFrame(loop);
     return;
   }
-  if(gs!=='play') return;
+  if(gs!=='play'){
+    if(gs==='over' && jumpscareTimer>0){ drawJumpscare(); requestAnimationFrame(loop); }
+    return;
+  }
   frame++;
   if(comboTimer>0){ comboTimer--; if(comboTimer<=0) combo=0; }
   if(altFireCd>0) altFireCd--;
