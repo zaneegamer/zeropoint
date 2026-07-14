@@ -265,7 +265,7 @@ let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doRe
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071403';
+const BUILD_VERSION = '2026071404';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -7352,13 +7352,22 @@ function rebuildMainMenu(ov){
   const mapLabels={random:'MAP: RANDOM',plaza:'MAP: PLAZA',hospital:'MAP: HOSPITAL',compound:'MAP: COMPOUND',maze:'MAP: MAZE',custom:'MAP: CUSTOM'};
   const coopCol=coopMode?'#44ffaa':'#aaa';
   const dailyPlayedToday=loadDailyLeaderboard().length>0;
-  ov.innerHTML=`
-    <h1>ZEROPOINT${np>0?' '+'★'.repeat(Math.min(np,3)):''}</h1>
-    <p><b>WASD</b> — Move &nbsp;·&nbsp; <b>Mouse</b> — Look<br>
+  const controlsP = touchMode
+    ? `<p><b>Left side drag</b> — Move &nbsp;·&nbsp; <b>Right side drag</b> — Look<br>
+       <b>FIRE</b> — Shoot &nbsp;·&nbsp; <b>RLD</b> — Reload &nbsp;·&nbsp; <b>Double-tap</b> — Dash<br>
+       <b>Tap an item icon</b> to arm it, <b>tap the screen</b> to use it<br><br>
+       Clear all zombies each wave to advance.</p>`
+    : `<p><b>WASD</b> — Move &nbsp;·&nbsp; <b>Mouse</b> — Look<br>
        <b>Click</b> — Shoot &nbsp;·&nbsp; <b>R</b> — Reload<br>
        <b>ESC</b> — Pause &nbsp;·&nbsp; <b>B</b> — Third Person &nbsp;·&nbsp; <b>M</b> — Map<br>
        <b>N</b> — Mute<br><br>
-       Clear all zombies each wave to advance.</p>
+       Clear all zombies each wave to advance.</p>`;
+  const mobileHelpBtn = touchMode
+    ? `<button id="mobileHelpBtnM" style="padding:10px 14px;font-size:13px;font-weight:bold;background:rgba(0,204,255,0.08);color:#00ccff;border:1px solid #045;border-radius:8px;cursor:pointer;letter-spacing:2px">❓ HOW TO PLAY</button>`
+    : '';
+  ov.innerHTML=`
+    <h1>ZEROPOINT${np>0?' '+'★'.repeat(Math.min(np,3)):''}</h1>
+    ${controlsP}
     <div id="lbDiv" style="margin:4px 0;max-width:340px;width:100%"></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;justify-items:stretch;max-width:760px;width:100%">
       <button id="startBtn" style="padding:10px 20px;font-size:16px;font-weight:bold;background:linear-gradient(135deg,#0055aa,#00aaff);color:#fff;border:none;border-radius:8px;cursor:pointer;letter-spacing:2px;box-shadow:0 0 20px #00aaff88">PLAY</button>
@@ -7370,6 +7379,7 @@ function rebuildMainMenu(ov){
       <button id="coopBtnM" style="padding:10px 14px;font-size:12px;font-weight:bold;background:rgba(0,255,150,0.08);color:${coopCol};border:1px solid ${coopMode?'#22aa66':'#223322'};border-radius:8px;cursor:pointer;letter-spacing:1px">CO-OP: ${coopMode?'ON ●':'OFF'}</button>
       <button id="metaBtnM" style="padding:10px 14px;font-size:12px;font-weight:bold;background:rgba(180,80,255,0.1);color:#cc88ff;border:1px solid #331144;border-radius:8px;cursor:pointer;letter-spacing:1px">META ★${getPrestige()}</button>
       <button id="dailyBtnM" style="padding:10px 14px;font-size:12px;font-weight:bold;background:rgba(255,220,0,0.08);color:#ffdd44;border:1px solid ${dailyPlayedToday?'#443300':'#ffcc00'};border-radius:8px;cursor:pointer;letter-spacing:1px;${dailyPlayedToday?'':'box-shadow:0 0 14px #ffcc0088;'}position:relative">📅 DAILY CHALLENGE${dailyPlayedToday?' <span style=\'color:#44ff44;font-weight:bold\'>COMPLETE!</span>':' <span style=\'color:#ff4444\'>●NEW</span>'}</button>
+      ${mobileHelpBtn}
     </div>`;
   document.getElementById('startBtn').addEventListener('click', startGameGated);
   document.getElementById('perkBtnM').addEventListener('click', showPerkScreen);
@@ -7380,7 +7390,46 @@ function rebuildMainMenu(ov){
   document.getElementById('coopBtnM').addEventListener('click', ()=>{ coopMode=!coopMode; document.body.classList.toggle('coop-active',coopMode); rebuildMainMenu(ov); });
   document.getElementById('metaBtnM').addEventListener('click', showMetaScreen);
   document.getElementById('dailyBtnM').addEventListener('click', showDailyChallengeScreen);
+  if(touchMode) document.getElementById('mobileHelpBtnM').addEventListener('click', showMobileHelpScreen);
   refreshLeaderboard(); gs='menu';
+}
+
+// ── MOBILE HOW-TO-PLAY ──────────────────────────────────────
+function showMobileHelpScreen(){
+  const ov=document.getElementById('overlay'); ov.style.display='flex';
+  ov.innerHTML=`
+    <h1 style="font-size:30px;margin-bottom:2px">HOW TO PLAY</h1>
+    <p style="font-size:10px;color:#556;letter-spacing:3px;margin-bottom:10px">TOUCH CONTROLS</p>
+    <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;max-width:680px">
+      <div style="background:rgba(0,150,255,0.06);border:1px solid #224;border-radius:10px;padding:14px 20px;min-width:220px;max-width:260px;text-align:left">
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;color:#44aaff;margin-bottom:8px">MOVE &amp; LOOK</div>
+        <div style="font-size:12px;color:#ccd;line-height:1.9">
+          <b>Left side</b> — drag the joystick to move<br>
+          <b>Right side</b> — drag to look around<br>
+          <b>Double-tap</b> anywhere — dash
+        </div>
+      </div>
+      <div style="background:rgba(255,60,60,0.06);border:1px solid #422;border-radius:10px;padding:14px 20px;min-width:220px;max-width:260px;text-align:left">
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;color:#ff5555;margin-bottom:8px">COMBAT</div>
+        <div style="font-size:12px;color:#ccd;line-height:1.9">
+          <b>FIRE</b> — hold to shoot<br>
+          <b>RLD</b> — reload<br>
+          <b>II</b> (top-left) — pause
+        </div>
+      </div>
+      <div style="background:rgba(100,255,150,0.06);border:1px solid #242;border-radius:10px;padding:14px 20px;min-width:220px;max-width:260px;text-align:left">
+        <div style="font-size:13px;font-weight:bold;letter-spacing:2px;color:#44ff88;margin-bottom:8px">ITEMS</div>
+        <div style="font-size:12px;color:#ccd;line-height:1.9">
+          <b>Tap</b> a medkit / potion / shield cell / grenade icon at the bottom to arm it — it'll glow<br>
+          <b>Tap anywhere</b> on screen to use it<br>
+          <b>Tap the icon again</b> to cancel
+        </div>
+      </div>
+    </div>
+    <p style="font-size:11px;color:#889;margin-top:14px;max-width:440px">Play in landscape. On iPhone, add ZEROPOINT to your home screen (Safari's Share button) for fullscreen play.</p>
+    <button id="mobileHelpBackBtn" style="margin-top:4px;padding:13px 46px;font-size:17px;font-weight:bold;background:linear-gradient(135deg,#0055aa,#00aaff);color:#fff;border:none;border-radius:8px;cursor:pointer;letter-spacing:2px;box-shadow:0 0 20px #00aaff88">GOT IT</button>`;
+  document.getElementById('mobileHelpBackBtn').addEventListener('click', ()=>{ rebuildMainMenu(ov); });
+  gs='menu';
 }
 
 function showDailyChallengeScreen(){
