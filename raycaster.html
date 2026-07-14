@@ -263,7 +263,7 @@ let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doRe
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071401';
+const BUILD_VERSION = '2026071402';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -968,7 +968,9 @@ if(touchMode){
     updateArmedUI();
   }
   function armSlot(id,type){
-    document.getElementById(id).addEventListener('pointerdown', e=>{
+    const el=document.getElementById(id);
+    el.style.pointerEvents='auto'; // #inventory has pointer-events:none, which is inherited — opt this slot back in
+    el.addEventListener('pointerdown', e=>{
       e.stopPropagation();
       if(gs!=='play') return;
       if(tcArmedItem===type){ tcArmedItem=null; }
