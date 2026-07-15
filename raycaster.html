@@ -7,6 +7,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ZEROPOINT">
+<meta name="theme-color" content="#00ccff">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <title>ZEROPOINT</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -14,14 +18,14 @@ body { background:#000; display:flex; justify-content:center; align-items:center
 #gc { position:relative; user-select:none; touch-action:none; }
 #touchControls { position:absolute; inset:0; display:none; z-index:40; }
 .tc-look { position:absolute; inset:0; }
-.tc-joy-base { position:absolute; left:26px; bottom:26px; width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,.07); border:2px solid rgba(255,255,255,.18); pointer-events:none; }
+.tc-joy-base { position:absolute; left:calc(26px + env(safe-area-inset-left)); bottom:calc(26px + env(safe-area-inset-bottom)); width:110px; height:110px; border-radius:50%; background:rgba(255,255,255,.07); border:2px solid rgba(255,255,255,.18); pointer-events:none; }
 .tc-joy-stick { position:absolute; left:35px; top:35px; width:40px; height:40px; border-radius:50%; background:rgba(0,204,255,.35); border:2px solid rgba(0,204,255,.7); pointer-events:none; }
 .tc-btn { position:absolute; border-radius:50%; background:rgba(255,255,255,.09); border:2px solid rgba(255,255,255,.22); color:#fff; font-size:11px; font-weight:bold; letter-spacing:1px; display:flex; align-items:center; justify-content:center; pointer-events:auto; user-select:none; -webkit-user-select:none; }
 .tc-btn:active { background:rgba(0,204,255,.3); border-color:#00ccff; }
-#tcFire { right:24px; bottom:34px; width:88px; height:88px; background:rgba(255,60,60,.16); border-color:rgba(255,90,90,.45); font-size:13px; }
+#tcFire { right:calc(24px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); width:88px; height:88px; background:rgba(255,60,60,.16); border-color:rgba(255,90,90,.45); font-size:13px; }
 #tcFire:active { background:rgba(255,60,60,.4); border-color:#ff5555; }
-#tcReload { right:126px; bottom:32px; width:52px; height:52px; }
-#tcPause { left:16px; top:16px; width:40px; height:40px; font-size:16px; }
+#tcReload { right:calc(126px + env(safe-area-inset-right)); bottom:calc(32px + env(safe-area-inset-bottom)); width:52px; height:52px; }
+#tcPause { left:calc(16px + env(safe-area-inset-left)); top:calc(16px + env(safe-area-inset-top)); width:44px; height:44px; font-size:16px; }
 canvas { display:block; }
 #hud { position:absolute; top:0; left:0; width:100%; pointer-events:none; }
 .srow { position:absolute; top:12px; display:flex; gap:8px; }
@@ -31,7 +35,7 @@ canvas { display:block; }
 body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 .stat span { color:#00ccff; }
 #rlBar { position:absolute; bottom:82px; left:50%; transform:translateX(-50%); width:150px; display:none; flex-direction:column; align-items:center; gap:3px; pointer-events:none; }
-#inventory { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); display:flex; gap:5px; pointer-events:none; z-index:41; }
+#inventory { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); display:flex; gap:5px; pointer-events:none; z-index:41; }
 .inv-slot { width:50px; height:54px; background:rgba(0,0,0,.7); border:1px solid rgba(255,255,255,.13); border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; position:relative; }
 .inv-slot.armed { border-color:#00ffcc; box-shadow:0 0 12px #00ffccaa; animation:invArmPulse 0.9s ease-in-out infinite; }
 @keyframes invArmPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.1); } }
@@ -242,6 +246,7 @@ body.coop-active #p2ControlHint { display:block; }
     <div class="settings-row"><label>FOV</label><input type="range" id="fovSl" min="0.44" max="0.88" step="0.04" value="0.66"><span class="sv" id="fovVal">NORM</span></div>
     <div class="settings-row"><label>REDUCE FLASH</label><input type="checkbox" id="reducedFlashCb"></div>
     <div class="settings-row"><label>COLORBLIND MODE</label><input type="checkbox" id="colorblindCb"></div>
+    <div class="settings-row"><label>PERFORMANCE MODE</label><input type="checkbox" id="perfModeCb"></div>
     <div class="settings-sub">KEYBINDS &middot; CLICK TO REBIND</div>
     <div id="keybindGrid"></div>
     <button class="pause-btn" id="settingsBackBtn" style="background:rgba(255,255,255,0.07);color:#aaa;border:1px solid #334;margin-top:8px">&#9664; BACK</button>
@@ -285,7 +290,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071503';
+const BUILD_VERSION = '2026071504';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -902,6 +907,23 @@ function getSFX(){
   if(sfxAC.state==='suspended') sfxAC.resume().catch(()=>{});
   return sfxAC;
 }
+function vibrate(pattern){
+  if(touchMode && navigator.vibrate){ try{ navigator.vibrate(pattern); }catch(e){} }
+}
+// ── SCREEN WAKE LOCK ───────────────────────────────────────
+// Keeps the screen from auto-dimming/locking mid-run. Browsers release the
+// lock automatically when the tab backgrounds, so re-acquire on visibilitychange.
+let _wakeLock=null;
+function requestWakeLock(){
+  if(!('wakeLock' in navigator)) return;
+  navigator.wakeLock.request('screen').then(wl=>{ _wakeLock=wl; }).catch(()=>{});
+}
+function releaseWakeLock(){
+  if(_wakeLock){ try{ _wakeLock.release(); }catch(e){} _wakeLock=null; }
+}
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState==='visible' && (gs==='play'||gs==='aim') && !_wakeLock) requestWakeLock();
+});
 function unlockAudio(){
   getSFX();
   if(typeof ambientAC!=='undefined' && ambientAC && ambientAC.state==='suspended') ambientAC.resume().catch(()=>{});
@@ -912,6 +934,7 @@ document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) unlockA
 
 function requestGameLock(){
   unlockAudio();
+  requestWakeLock();
   // Touch devices have no Pointer Lock cursor to capture — just mark input as "live" and hide the hint.
   if(touchMode){
     pointerLocked=true; document.getElementById('lockMsg').style.display='none';
@@ -1286,12 +1309,13 @@ let sensitivityMult=1, masterVol=0.8, fovMult=0.66;
 let _mutedVol=null;
 let reducedFlash=false;
 let colorblindMode=false;
+let perfMode=false;
 // Okabe-Ito colorblind-safe palette — distinct under deuteranopia/protanopia/tritanopia
 // (M uses white instead of Okabe-Ito black so the boss glow stays visible against dark maps)
 const ZTYPE_COLS_CB={n:'#56B4E9',f:'#E69F00',K:'#CC79A7',b:'#0072B2',r:'#009E73',h:'#F0E442',X:'#D55E00',M:'#FFFFFF',a:'#999999'};
 function ztypeCol(tp){ return (colorblindMode?ZTYPE_COLS_CB:ZTYPE_COLS)[tp]||'#ff8800'; }
 function saveSettings(){
-  try{ localStorage.setItem('zp_settings', JSON.stringify({sensitivityMult,masterVol,fovMult,_mutedVol,reducedFlash,colorblindMode})); }catch(e){}
+  try{ localStorage.setItem('zp_settings', JSON.stringify({sensitivityMult,masterVol,fovMult,_mutedVol,reducedFlash,colorblindMode,perfMode})); }catch(e){}
 }
 function loadSettings(){
   try{
@@ -1303,6 +1327,7 @@ function loadSettings(){
     if(typeof s._mutedVol==='number') _mutedVol=s._mutedVol;
     if(typeof s.reducedFlash==='boolean') reducedFlash=s.reducedFlash;
     if(typeof s.colorblindMode==='boolean') colorblindMode=s.colorblindMode;
+    if(typeof s.perfMode==='boolean') perfMode=s.perfMode;
   }catch(e){}
 }
 // ── KEY REBINDING ────────────────────────────────────────────
@@ -1361,10 +1386,12 @@ function syncSettingsUI(){
   document.getElementById('fovVal').textContent=fovMult<0.55?'NARW':fovMult<0.78?'NORM':'WIDE';
   const flashCb=document.getElementById('reducedFlashCb'); if(flashCb) flashCb.checked=reducedFlash;
   const cbCb=document.getElementById('colorblindCb'); if(cbCb) cbCb.checked=colorblindMode;
+  const perfCb=document.getElementById('perfModeCb'); if(perfCb) perfCb.checked=perfMode;
   renderKeybindRows();
 }
 loadSettings(); loadKeybinds(); syncSettingsUI(); updateKeyHint();
 document.getElementById('colorblindCb').addEventListener('change', e=>{ colorblindMode=e.target.checked; saveSettings(); });
+document.getElementById('perfModeCb').addEventListener('change', e=>{ perfMode=e.target.checked; saveSettings(); });
 function toggleMute(){
   if(_mutedVol===null){ _mutedVol=masterVol; masterVol=0; announce('MUTED'); }
   else { masterVol=_mutedVol; _mutedVol=null; announce('UNMUTED'); }
@@ -3768,6 +3795,7 @@ function spawnDeathParticles(z) {
 
 function drawParticles() {
   if(!particles.length) return;
+  if(perfMode && particles.length>100) particles.splice(0, particles.length-100);
   const cos=Math.cos(P.angle), sin=Math.sin(P.angle);
   const _pl2=getZoomPlan(); const cpx=-sin*_pl2, cpy=cos*_pl2;
   const px2=camX/CELL, py2=camY/CELL;
@@ -3815,7 +3843,8 @@ function drawParticles() {
   ctx.globalAlpha=1;
   ctx.restore();
 
-  // Draw glow orbs with bloom
+  // Draw glow orbs with bloom (shadowBlur is one of the costliest Canvas2D ops —
+  // skip the blur pass in perf mode and just draw flat, since this runs per-particle)
   ctx.save();
   for(const p of particles){
     if(p.k!=='glow') continue;
@@ -3824,12 +3853,12 @@ function drawParticles() {
     const [sx,sy,sz]=proj;
     const a=p.life*p.life;
     ctx.globalAlpha=a*0.7;
-    ctx.shadowColor=p.col; ctx.shadowBlur=sz*2.5;
+    if(!perfMode){ ctx.shadowColor=p.col; ctx.shadowBlur=sz*2.5; }
     ctx.fillStyle=p.col;
     ctx.beginPath(); ctx.arc(sx,sy,Math.max(2,sz*0.6),0,Math.PI*2); ctx.fill();
     // brighter core
     ctx.globalAlpha=a;
-    ctx.shadowBlur=sz;
+    if(!perfMode) ctx.shadowBlur=sz;
     ctx.fillStyle='#ffffff';
     ctx.beginPath(); ctx.arc(sx,sy,Math.max(1,sz*0.22),0,Math.PI*2); ctx.fill();
   }
@@ -4420,7 +4449,7 @@ function updateP2HealthUI(){
 function loseLife(){
   if(activeGameMode==='infection') infectionStacks++;
   shakeT=18; shakeMag=13;
-  flashTime=28; playHurt();
+  flashTime=28; playHurt(); vibrate(45);
   const dmg = 50;
   if(shield > 0){
     shield = Math.max(0, shield - dmg);
@@ -4434,7 +4463,7 @@ function loseLife(){
 function p2LoseLife(){
   if(p2Downed) return;
   shakeT=18; shakeMag=13;
-  flashTime=14; playHurt();
+  flashTime=14; playHurt(); vibrate(45);
   const dmg=50;
   if(p2shield>0) p2shield=Math.max(0,p2shield-dmg);
   else p2hp=Math.max(0,p2hp-dmg);
@@ -4953,6 +4982,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', ()=>{
   document.getElementById('inventory').style.display='';
   stopAmbient(); stopDangerLayer();
   if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
+  releaseWakeLock();
   const ov=document.getElementById('overlay'); ov.style.display='flex';
   rebuildMainMenu(ov);
 });
@@ -4989,8 +5019,9 @@ function gameOver(){
   gs='over';
   stopAmbient(); stopDangerLayer();
   if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
+  releaseWakeLock();
   jumpscareTimer = 110;
-  playScream();
+  playScream(); vibrate([0,70,45,70,45,220]);
   if(dailyMode){ addToDailyLeaderboard(score, wave); updateDailyStreak(); } else addToLeaderboard(score, wave);
   setTimeout(()=>{
     const typeLabel={n:'Zombie',f:'Runner',K:'Stalker',b:'Brute',r:'Ranged',h:'Healer',X:'Bomber',M:'Overlord',a:'Armored'};
