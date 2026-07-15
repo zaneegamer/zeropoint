@@ -285,7 +285,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071501';
+const BUILD_VERSION = '2026071502';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -4918,7 +4918,7 @@ function pauseGame(){
     document.getElementById('hud').style.display='none';
     document.getElementById('inventory').style.display='none';
   }
-  if(pointerLocked) document.exitPointerLock();
+  if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   if(ambientAC) ambientAC.suspend();
   if(_dangerAC) _dangerAC.suspend();
 }
@@ -4952,7 +4952,7 @@ document.getElementById('pauseMenuBtn').addEventListener('click', ()=>{
   document.getElementById('hud').style.display='';
   document.getElementById('inventory').style.display='';
   stopAmbient(); stopDangerLayer();
-  if(pointerLocked) document.exitPointerLock();
+  if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   const ov=document.getElementById('overlay'); ov.style.display='flex';
   rebuildMainMenu(ov);
 });
@@ -4988,7 +4988,7 @@ document.getElementById('reducedFlashCb').addEventListener('change', e=>{
 function gameOver(){
   gs='over';
   stopAmbient(); stopDangerLayer();
-  if(pointerLocked) document.exitPointerLock();
+  if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   jumpscareTimer = 110;
   playScream();
   if(dailyMode){ addToDailyLeaderboard(score, wave); updateDailyStreak(); } else addToLeaderboard(score, wave);
@@ -6022,7 +6022,7 @@ function loop(){
     if(victoryAnimT>210){
       victoryAnimT=0;
       stopAmbient(); stopDangerLayer();
-      if(pointerLocked) document.exitPointerLock();
+      if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
       const ov=document.getElementById('overlay'); ov.style.display='flex';
       document.getElementById('hud').style.display='';
       document.getElementById('inventory').style.display='';
@@ -6711,7 +6711,7 @@ function renderGunChoiceP2(){
 
 function openShop(){
   stopDangerLayer();
-  document.exitPointerLock();
+  if(document.exitPointerLock) document.exitPointerLock();
   const el=document.getElementById('shopOverlay');
   el.style.display='flex';
   document.getElementById('shopScoreVal').textContent=score;
@@ -7069,7 +7069,7 @@ function drawAimHUD(){
 function aimTrainerEnd(){
   gs='over';
   stopAmbient(); stopDangerLayer();
-  if(pointerLocked) document.exitPointerLock();
+  if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   document.getElementById('hud').style.display='';
   document.getElementById('inventory').style.display='';
   // Push final partial interval
