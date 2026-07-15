@@ -285,7 +285,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071502';
+const BUILD_VERSION = '2026071503';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -5944,10 +5944,18 @@ function loop(){
     blitzTimer++;
     if(--blitzCarePkgCd<=0){
       blitzCarePkgCd=5400;
-      const types=['medkit','ammo','ammo','grenade','shieldcell'];
-      const t2=types[Math.floor(Math.random()*types.length)];
-      pickups.push({x:P.x+(Math.random()-.5)*CELL*4,y:P.y+(Math.random()-.5)*CELL*4,type:t2,canvas:ammoPickupCanvas,aspect:32/64});
-      announce('CARE PACKAGE INCOMING');
+      let cpx=null,cpy=null;
+      for(let tries=0;tries<12;tries++){
+        const ang=Math.random()*Math.PI*2, dist=1.5+Math.random()*2.5;
+        const tx=P.x/CELL+Math.cos(ang)*dist, ty=P.y/CELL+Math.sin(ang)*dist;
+        if(cell(Math.floor(tx),Math.floor(ty))===0){ cpx=tx; cpy=ty; break; }
+      }
+      if(cpx!==null){
+        const types=['medkit','ammo','ammo','grenade','shieldcell'];
+        const t2=types[Math.floor(Math.random()*types.length)];
+        pickups.push({x:cpx*CELL,y:cpy*CELL,type:t2,canvas:ammoPickupCanvas,aspect:32/64});
+        announce('CARE PACKAGE INCOMING');
+      }
     }
     const newBlitzTier=Math.floor(blitzTimer/1800);
     if(newBlitzTier>blitzTier){ blitzTier=newBlitzTier; announce(`THREAT LEVEL ${blitzTier+1}`); flashTime=14; }
@@ -7408,9 +7416,13 @@ function updateDynEvent(){
   dynEventCd=700+Math.floor(Math.random()*600);
   const roll=Math.random();
   if(roll<0.33){
-    const ang=Math.random()*Math.PI*2,dist=3+Math.random()*4;
-    const dpx=P.x/CELL+Math.cos(ang)*dist,dpy=P.y/CELL+Math.sin(ang)*dist;
-    if(cell(Math.floor(dpx),Math.floor(dpy))===0){
+    let dpx=null,dpy=null;
+    for(let tries=0;tries<10;tries++){
+      const ang=Math.random()*Math.PI*2,dist=3+Math.random()*4;
+      const tx=P.x/CELL+Math.cos(ang)*dist,ty=P.y/CELL+Math.sin(ang)*dist;
+      if(cell(Math.floor(tx),Math.floor(ty))===0){ dpx=tx; dpy=ty; break; }
+    }
+    if(dpx!==null){
       const types=['medkit','medkit','grenade','ammo','shieldcell'];
       const tp=types[Math.floor(Math.random()*types.length)];
       const cvs=tp==='medkit'?pickupCanvases.medkit:tp==='grenade'?grenadePickupCanvas:ammoPickupCanvas;
