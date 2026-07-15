@@ -285,7 +285,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071407';
+const BUILD_VERSION = '2026071501';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -888,7 +888,30 @@ const P = { x:0, y:0, angle:0, speed:2.5 };
 const K = {};
 let mouseDX = 0, pointerLocked = false, isZooming = false;
 let jumpscareTimer = 0; // frames remaining for jumpscare
+// ── SHARED AUDIO CONTEXT ──────────────────────────────────
+// One persistent AudioContext for all one-shot SFX, instead of `new AudioContext()`
+// per sound. iOS/Android mobile browsers only let an AudioContext actually produce
+// sound if it's resumed inside (or very close to) a real user-gesture call stack —
+// desktop browsers are lenient and mask this, which is why sounds "work on computer
+// but not on phone." Resuming this single context on every gesture keeps it alive.
+let sfxAC=null;
+function getSFX(){
+  if(!sfxAC){
+    try{ sfxAC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; }
+  }
+  if(sfxAC.state==='suspended') sfxAC.resume().catch(()=>{});
+  return sfxAC;
+}
+function unlockAudio(){
+  getSFX();
+  if(typeof ambientAC!=='undefined' && ambientAC && ambientAC.state==='suspended') ambientAC.resume().catch(()=>{});
+  if(_dangerAC && _dangerAC.state==='suspended') _dangerAC.resume().catch(()=>{});
+}
+['pointerdown','touchstart','keydown','click'].forEach(evt=>document.addEventListener(evt, unlockAudio, {passive:true}));
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) unlockAudio(); });
+
 function requestGameLock(){
+  unlockAudio();
   // Touch devices have no Pointer Lock cursor to capture — just mark input as "live" and hide the hint.
   if(touchMode){
     pointerLocked=true; document.getElementById('lockMsg').style.display='none';
@@ -4080,7 +4103,7 @@ function drawHazards(){
 // ── SHOOTING ───────────────────────────────────────────────
 function playGunshot(level) {
   try {
-    const ac = new AudioContext();
+    const ac = getSFX(); if(!ac) return;
     const master = ac.createGain();
     master.gain.value*=masterVol; master.connect(ac.destination);
     const now = ac.currentTime;
@@ -4144,7 +4167,6 @@ function playGunshot(level) {
         boom(130, 40, 0.05, 0.3);
         break;
     }
-    setTimeout(() => { try { ac.close(); } catch(e){} }, 800);
   } catch(e) {}
 }
 
@@ -4487,7 +4509,7 @@ function nextWave(){
 
 function playWaveIntroSound(waveNum) {
   try {
-    const ac = new AudioContext();
+    const ac = getSFX(); if(!ac) return;
     const master = ac.createGain(); master.gain.value=0.7; master.gain.value*=masterVol; master.connect(ac.destination);
     const now = ac.currentTime;
     const sub = ac.createOscillator(); sub.type='sawtooth';
@@ -4504,7 +4526,6 @@ function playWaveIntroSound(waveNum) {
     const dc = new Float32Array(256);
     for(let i=0;i<256;i++){const x=i/128-1; dc[i]=Math.tanh(x*3);}
     dist.curve=dc; sg.disconnect(master); sg.connect(dist); dist.connect(master);
-    setTimeout(()=>{try{ac.close();}catch(e){}},1500);
   } catch(e) {}
 }
 
@@ -4618,7 +4639,7 @@ function drawWaveIntro(){
 
 function playFootstep() {
   try {
-    const ac = new AudioContext();
+    const ac = getSFX(); if(!ac) return;
     const master = ac.createGain();
     master.gain.value = 0.6;
     master.gain.value*=masterVol; master.connect(ac.destination);
@@ -4649,8 +4670,6 @@ function playFootstep() {
     const cg = ac.createGain();
     cg.gain.value = 1.0;
     csrc.connect(bpf); bpf.connect(cg); cg.connect(master); csrc.start(now);
-
-    setTimeout(() => { try { ac.close(); } catch(e){} }, 300);
   } catch(e) {}
 }
 
@@ -4659,7 +4678,7 @@ function playZombieFootstep(dist, tp) {
   try {
     const vol=Math.max(0,(1-dist/9))*0.15;
     if(vol<0.004) return;
-    const ac=new AudioContext();
+    const ac=getSFX(); if(!ac) return;
     const master=ac.createGain(); master.gain.value=vol*masterVol; master.connect(ac.destination);
     const now=ac.currentTime;
     const pitch=tp==='b'?32:tp==='f'?52:42;
@@ -4676,13 +4695,12 @@ function playZombieFootstep(dist, tp) {
     const lpf=ac.createBiquadFilter(); lpf.type='lowpass'; lpf.frequency.value=260;
     const ng=ac.createGain(); ng.gain.value=0.55;
     nsrc.connect(lpf); lpf.connect(ng); ng.connect(master); nsrc.start(now);
-    setTimeout(()=>{try{ac.close();}catch(e){}},350);
   } catch(e) {}
 }
 
 function playZombieGroan(dist, tp) {
   try {
-    const ac = new AudioContext();
+    const ac = getSFX(); if(!ac) return;
     const master = ac.createGain();
     master.gain.value = Math.max(0, 1 - dist/11) * 0.38;
     master.gain.value*=masterVol; master.connect(ac.destination);
@@ -4735,14 +4753,12 @@ function playZombieGroan(dist, tp) {
     env.gain.linearRampToValueAtTime(0, now + dur);
 
     oscMix.connect(ws); ws.connect(lpf); lpf.connect(peak); peak.connect(env); env.connect(master);
-
-    setTimeout(() => { try { ac.close(); } catch(e){} }, 2500);
   } catch(e) {}
 }
 
 function playReload() {
   try {
-    const ac=new AudioContext(), now=ac.currentTime;
+    const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.4; master.gain.value*=masterVol; master.connect(ac.destination);
     // metallic scrape
     const buf=ac.createBuffer(1,ac.sampleRate*0.12,ac.sampleRate);
@@ -4751,13 +4767,12 @@ function playReload() {
     const src=ac.createBufferSource(); src.buffer=buf;
     const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=3800; bp.Q.value=1.2;
     src.connect(bp); bp.connect(master); src.start(now);
-    setTimeout(()=>{try{ac.close();}catch(e){}},300);
   } catch(e) {}
 }
 
 function playReloadComplete() {
   try {
-    const ac=new AudioContext(), now=ac.currentTime;
+    const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.5; master.gain.value*=masterVol; master.connect(ac.destination);
     // two-tone click: high then low
     [[900,0,0.03],[500,0.04,0.06]].forEach(([freq,delay,dur])=>{
@@ -4766,13 +4781,12 @@ function playReloadComplete() {
       g.gain.setValueAtTime(0.6,now+delay); g.gain.exponentialRampToValueAtTime(0.001,now+delay+dur);
       o.connect(g); g.connect(master); o.start(now+delay); o.stop(now+delay+dur+0.01);
     });
-    setTimeout(()=>{try{ac.close();}catch(e){}},300);
   } catch(e) {}
 }
 
 function playHurt() {
   try {
-    const ac=new AudioContext(), now=ac.currentTime;
+    const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.7; master.gain.value*=masterVol; master.connect(ac.destination);
     // grunt thud
     const o=ac.createOscillator(), g=ac.createGain();
@@ -4787,13 +4801,12 @@ function playHurt() {
     const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=600;
     const ng=ac.createGain(); ng.gain.value=0.8;
     src.connect(lp); lp.connect(ng); ng.connect(master); src.start(now);
-    setTimeout(()=>{try{ac.close();}catch(e){}},400);
   } catch(e) {}
 }
 
 function playPickup() {
   try {
-    const ac=new AudioContext(), now=ac.currentTime;
+    const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.35; master.gain.value*=masterVol; master.connect(ac.destination);
     [600,900,1200].forEach((freq,i)=>{
       const o=ac.createOscillator(), g=ac.createGain();
@@ -4802,13 +4815,12 @@ function playPickup() {
       g.gain.setValueAtTime(0.5,t2); g.gain.exponentialRampToValueAtTime(0.001,t2+0.12);
       o.connect(g); g.connect(master); o.start(t2); o.stop(t2+0.13);
     });
-    setTimeout(()=>{try{ac.close();}catch(e){}},500);
   } catch(e) {}
 }
 
 function playExplosionSound() {
   try {
-    const ac=new AudioContext(), now=ac.currentTime;
+    const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.8; master.gain.value*=masterVol; master.connect(ac.destination);
     // sub boom
     const sub=ac.createOscillator(), sg=ac.createGain();
@@ -4823,14 +4835,12 @@ function playExplosionSound() {
     const lp=ac.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=1400;
     const ng=ac.createGain(); ng.gain.value=1.2;
     src.connect(lp); lp.connect(ng); ng.connect(master); src.start(now);
-    setTimeout(()=>{try{ac.close();}catch(e){}},800);
   } catch(e) {}
 }
 
 function playScream() {
   try {
-    const ac = new AudioContext();
-    if(ac.state==='suspended') ac.resume().catch(()=>{}); // gameOver() fires from a damage tick, not a tap — iOS Safari needs an explicit resume() here
+    const ac = getSFX(); if(!ac) return;
     const master = ac.createGain();
     master.gain.value = 2.5; // loud
     master.gain.value*=masterVol; master.connect(ac.destination);
@@ -6862,26 +6872,24 @@ function playAimHitSound(streak){
     const s=streak||0;
     const baseFreq=900+Math.min(s,20)*45;
     const topFreq=baseFreq+400+Math.min(s,10)*30;
-    const ac=new AudioContext();
+    const ac=getSFX(); if(!ac) return;
     const o=ac.createOscillator(),g=ac.createGain();
     o.type='sine'; o.frequency.setValueAtTime(baseFreq,ac.currentTime);
     o.frequency.exponentialRampToValueAtTime(topFreq,ac.currentTime+0.05);
     g.gain.setValueAtTime(0.35*masterVol,ac.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.09);
     o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+0.1);
-    setTimeout(()=>ac.close(),200);
   }catch(e){}
 }
 function playAimMissSound(){
   try{
-    const ac=new AudioContext();
+    const ac=getSFX(); if(!ac) return;
     const o=ac.createOscillator(),g=ac.createGain();
     o.type='sine'; o.frequency.setValueAtTime(180,ac.currentTime);
     o.frequency.exponentialRampToValueAtTime(80,ac.currentTime+0.12);
     g.gain.setValueAtTime(0.25*masterVol,ac.currentTime);
     g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.15);
     o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+0.16);
-    setTimeout(()=>ac.close(),300);
   }catch(e){}
 }
 
