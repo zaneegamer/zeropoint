@@ -25,13 +25,14 @@ body { background:#000; display:flex; justify-content:center; align-items:center
 #tcFire { right:calc(24px + env(safe-area-inset-right)); bottom:calc(34px + env(safe-area-inset-bottom)); width:88px; height:88px; background:rgba(255,60,60,.16); border-color:rgba(255,90,90,.45); font-size:13px; }
 #tcFire:active { background:rgba(255,60,60,.4); border-color:#ff5555; }
 #tcReload { right:calc(126px + env(safe-area-inset-right)); bottom:calc(32px + env(safe-area-inset-bottom)); width:52px; height:52px; }
-#tcPause { left:calc(16px + env(safe-area-inset-left)); top:calc(16px + env(safe-area-inset-top)); width:44px; height:44px; font-size:16px; }
+#tcPause { right:calc(16px + env(safe-area-inset-right)); top:50%; transform:translateY(-50%); width:58px; height:58px; font-size:22px; background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.4); box-shadow:0 0 10px rgba(0,0,0,.5); }
+#tcPause:active { transform:translateY(-50%) scale(0.92); }
 canvas { display:block; }
 #hud { position:absolute; top:0; left:0; width:100%; pointer-events:none; }
-.srow { position:absolute; top:12px; display:flex; gap:8px; }
-.srow.L{left:12px;} .srow.C{left:50%;transform:translateX(-50%);} .srow.R{right:12px;}
+.srow { position:absolute; top:calc(12px + env(safe-area-inset-top)); display:flex; gap:8px; }
+.srow.L{left:calc(12px + env(safe-area-inset-left));} .srow.C{left:50%;transform:translateX(-50%);} .srow.R{right:calc(12px + env(safe-area-inset-right));}
 .stat { background:rgba(0,0,0,.65); border:1px solid #336; border-radius:7px; padding:5px 13px; color:#fff; font-size:13px; font-weight:bold; letter-spacing:1px; }
-#keyHint { position:absolute; right:12px; top:42px; color:rgba(200,210,230,.5); font-size:10px; letter-spacing:1px; font-family:'Courier New',monospace; text-align:right; }
+#keyHint { position:absolute; right:calc(12px + env(safe-area-inset-right)); top:calc(42px + env(safe-area-inset-top)); color:rgba(200,210,230,.5); font-size:10px; letter-spacing:1px; font-family:'Courier New',monospace; text-align:right; }
 body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 .stat span { color:#00ccff; }
 #rlBar { position:absolute; bottom:82px; left:50%; transform:translateX(-50%); width:150px; display:none; flex-direction:column; align-items:center; gap:3px; pointer-events:none; }
@@ -40,6 +41,10 @@ body.coop-active .srow.L, body.coop-active .srow.R { display:none; }
 .inv-slot.armed { border-color:#00ffcc; box-shadow:0 0 12px #00ffccaa; animation:invArmPulse 0.9s ease-in-out infinite; }
 @keyframes invArmPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.1); } }
 body.touch-device .inv-key { display:none; }
+body.touch-device .pause-btn { padding:16px 44px; font-size:17px; }
+body.touch-device #pauseOverlay { gap:22px; }
+body.touch-device .shop-card { padding:18px 10px; min-height:56px; }
+body.touch-device .shop-grid { gap:14px; }
 .inv-lbl { font-size:8px; color:#aaa; letter-spacing:1px; font-weight:bold; }
 .inv-key { position:absolute; top:3px; left:4px; font-size:7px; color:#555; font-weight:bold; }
 #inv-gun { border-color:rgba(255,238,68,.35); }
@@ -116,11 +121,11 @@ body.touch-device .inv-key { display:none; }
 .shop-card-cost.free { color:#44ff88; }
 .shop-continue { margin-top:4px; padding:10px 36px; font-size:15px; font-weight:bold; background:linear-gradient(135deg,#1a4400,#338800); color:#fff; border:2px solid #66cc00; border-radius:8px; cursor:pointer; letter-spacing:3px; font-family:'Courier New',monospace; box-shadow:0 0 14px #33660044; }
 .shop-continue:hover { background:linear-gradient(135deg,#225500,#44aa00); }
-#theme { position:absolute; bottom:14px; right:12px; background:rgba(0,0,0,.5); border:1px solid #334; border-radius:6px; padding:4px 10px; color:#445; font-size:10px; letter-spacing:2px; pointer-events:none; }
-#healthBars { position:absolute; bottom:14px; left:12px; display:flex; flex-direction:column; gap:5px; pointer-events:none; }
-#p2HealthBars { position:absolute; bottom:40px; right:12px; display:none; flex-direction:column; gap:5px; pointer-events:none; }
+#theme { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); background:rgba(0,0,0,.5); border:1px solid #334; border-radius:6px; padding:4px 10px; color:#445; font-size:10px; letter-spacing:2px; pointer-events:none; }
+#healthBars { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); left:calc(12px + env(safe-area-inset-left)); display:flex; flex-direction:column; gap:5px; pointer-events:none; }
+#p2HealthBars { position:absolute; bottom:calc(40px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); display:none; flex-direction:column; gap:5px; pointer-events:none; }
 body.coop-active #p2HealthBars { display:flex; }
-#p2ControlHint { position:absolute; bottom:100px; right:12px; display:none; background:rgba(0,0,0,.55); border:1px solid #422; border-radius:6px; padding:5px 9px; font-size:8px; color:#ff9999; letter-spacing:.5px; line-height:1.7; text-align:right; pointer-events:none; font-family:'Courier New',monospace; }
+#p2ControlHint { position:absolute; bottom:calc(100px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); display:none; background:rgba(0,0,0,.55); border:1px solid #422; border-radius:6px; padding:5px 9px; font-size:8px; color:#ff9999; letter-spacing:.5px; line-height:1.7; text-align:right; pointer-events:none; font-family:'Courier New',monospace; }
 body.coop-active #p2ControlHint { display:block; }
 .hbar-row { display:flex; align-items:center; gap:6px; }
 .hbar-label { color:#aaa; font-size:10px; font-weight:bold; letter-spacing:1px; width:16px; }
@@ -290,7 +295,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071504';
+const BUILD_VERSION = '2026071505';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -924,6 +929,22 @@ function releaseWakeLock(){
 document.addEventListener('visibilitychange', ()=>{
   if(document.visibilityState==='visible' && (gs==='play'||gs==='aim') && !_wakeLock) requestWakeLock();
 });
+// ── BACK-GESTURE GUARD ──────────────────────────────────────
+// A stray edge-swipe/hardware-back-button during play would otherwise exit the
+// page outright and lose the run. Keep one dummy history entry "in reserve": if
+// back is pressed mid-play, it consumes that entry (popstate fires, page stays
+// put) and we pause the game instead of losing progress; if back is pressed while
+// already paused/menued, we don't repush, so the next back-press genuinely exits
+// as expected. (Android back button/gesture: fully covered. iOS Safari's edge-swipe
+// is a platform-level gesture JS can't intercept — this only helps once in
+// standalone/home-screen mode where that gesture doesn't exist anyway.)
+try{ history.pushState({zpGuard:true}, '', location.href); }catch(e){}
+window.addEventListener('popstate', ()=>{
+  if(gs==='play'||gs==='aim'){
+    try{ history.pushState({zpGuard:true}, '', location.href); }catch(e){}
+    pauseGame();
+  }
+});
 function unlockAudio(){
   getSFX();
   if(typeof ambientAC!=='undefined' && ambientAC && ambientAC.state==='suspended') ambientAC.resume().catch(()=>{});
@@ -1223,6 +1244,16 @@ function _copyFallback(text){
   document.body.appendChild(ta); ta.select();
   try{ document.execCommand('copy'); }catch(e){}
   document.body.removeChild(ta);
+}
+function shareRunResult(sc,wv,kills){
+  const text=`ZEROPOINT — Wave ${wv} · Score ${sc.toLocaleString()} · ${kills} kills`;
+  if(navigator.share){
+    navigator.share({title:'ZEROPOINT',text}).catch(()=>{});
+    return;
+  }
+  copyToClipboard(text);
+  const b=document.getElementById('shareScoreBtn');
+  if(b){ const orig=b.textContent; b.textContent='COPIED!'; setTimeout(()=>{ if(document.getElementById('shareScoreBtn')) b.textContent=orig; },1500); }
 }
 const DAILY_MAP_NAMES={plaza:'PLAZA',hospital:'HOSPITAL',compound:'COMPOUND',maze:'MAZE'};
 const DAILY_MUTATOR_NAMES={none:'NORMAL — NO TWIST',ironman:'IRON MAN — NO HEALING',horde:'HORDE MODE — 2× ZOMBIES',speedrun:'SPEED RUN — BEAT THE CLOCK',heads:'HEADS ONLY — BODYSHOTS OFTEN MISS'};
@@ -4800,6 +4831,7 @@ function playReload() {
 }
 
 function playReloadComplete() {
+  vibrate(15);
   try {
     const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.5; master.gain.value*=masterVol; master.connect(ac.destination);
@@ -4834,6 +4866,7 @@ function playHurt() {
 }
 
 function playPickup() {
+  vibrate(12);
   try {
     const ac=getSFX(); if(!ac) return; const now=ac.currentTime;
     const master=ac.createGain(); master.gain.value=0.35; master.gain.value*=masterVol; master.connect(ac.destination);
@@ -5045,11 +5078,13 @@ function gameOver(){
       <div id="lbDiv" style="margin:4px 0;max-width:340px;width:100%"></div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         <button id="startBtn">PLAY AGAIN</button>
+        <button id="shareScoreBtn" style="padding:13px 20px;font-size:13px;font-weight:bold;background:rgba(0,200,255,0.1);color:#00ccff;border:1px solid #036;border-radius:8px;cursor:pointer;letter-spacing:2px">↗ SHARE</button>
         <button id="perkBtnGO" style="padding:13px 20px;font-size:13px;font-weight:bold;background:rgba(255,200,0,0.1);color:#ffcc44;border:1px solid #443300;border-radius:8px;cursor:pointer;letter-spacing:2px">PERKS ⚡${getPerkXP()}</button>
         <button id="goAimBtn" style="padding:13px 20px;font-size:13px;font-weight:bold;background:rgba(255,255,255,0.07);color:#aaa;border:1px solid #334;border-radius:8px;cursor:pointer;letter-spacing:2px">AIM TRAINER</button>
         ${wave>=10?`<button id="prestigeBtn" style="padding:13px 20px;font-size:13px;font-weight:bold;background:linear-gradient(135deg,#4400aa,#aa00ff);color:#fff;border:none;border-radius:8px;cursor:pointer;letter-spacing:2px;box-shadow:0 0 16px #aa00ff66">★ PRESTIGE</button>`:''}
       </div>`;
     document.getElementById('startBtn').addEventListener('click',startGameGated);
+    document.getElementById('shareScoreBtn').addEventListener('click',()=>shareRunResult(score,wave,totalKills));
     document.getElementById('perkBtnGO').addEventListener('click',showPerkScreen);
     document.getElementById('goAimBtn').addEventListener('click',showAimModeSelect);
     if(wave>=10&&document.getElementById('prestigeBtn')) document.getElementById('prestigeBtn').addEventListener('click',doPrestige);
