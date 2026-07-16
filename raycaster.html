@@ -123,6 +123,7 @@ body.touch-device #healthBars { bottom:calc(150px + env(safe-area-inset-bottom))
 .shop-continue:hover { background:linear-gradient(135deg,#225500,#44aa00); }
 #theme { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); background:rgba(0,0,0,.5); border:1px solid #334; border-radius:6px; padding:4px 10px; color:#445; font-size:10px; letter-spacing:2px; pointer-events:none; }
 #healthBars { position:absolute; bottom:calc(14px + env(safe-area-inset-bottom)); left:calc(12px + env(safe-area-inset-left)); display:flex; flex-direction:column; gap:5px; pointer-events:none; }
+#hpFullMsg { font-size:10px; font-weight:bold; letter-spacing:1px; color:#ff3333; text-shadow:0 0 6px #ff333388; opacity:0; transition:opacity .3s; }
 #p2HealthBars { position:absolute; bottom:calc(40px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); display:none; flex-direction:column; gap:5px; pointer-events:none; }
 body.coop-active #p2HealthBars { display:flex; }
 #p2ControlHint { position:absolute; bottom:calc(100px + env(safe-area-inset-bottom)); right:calc(12px + env(safe-area-inset-right)); display:none; background:rgba(0,0,0,.55); border:1px solid #422; border-radius:6px; padding:5px 9px; font-size:8px; color:#ff9999; letter-spacing:.5px; line-height:1.7; text-align:right; pointer-events:none; font-family:'Courier New',monospace; }
@@ -209,6 +210,7 @@ body.coop-active #p2ControlHint { display:block; }
     <div class="hbar-row"><span class="hbar-label">HP</span><div class="hbar-track"><div id="hpFill" class="hbar-fill green"></div></div><span id="hpNum" class="hbar-num">100</span></div>
     <div class="hbar-row"><span class="hbar-label">SH</span><div class="hbar-track"><div id="shFill" class="hbar-fill blue"></div></div><span id="shNum" class="hbar-num">100</span></div>
     <div class="hbar-row" id="coreHpRow" style="display:none"><span class="hbar-label" style="color:#ff8800;font-size:8px;width:28px">CORE</span><div class="hbar-track"><div id="coreFill" class="hbar-fill" style="background:linear-gradient(90deg,#cc4400,#ff8800);box-shadow:0 0 6px #ff880088"></div></div><span id="coreNum" class="hbar-num">100</span></div>
+    <div id="hpFullMsg">HP FULL</div>
   </div>
   <div id="p2HealthBars">
     <div class="hbar-row"><span class="hbar-label">HP</span><div class="hbar-track"><div id="p2hpFill" class="hbar-fill green"></div></div><span id="p2hpNum" class="hbar-num">100</span></div>
@@ -294,7 +296,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071604';
+const BUILD_VERSION = '2026071605';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -4412,8 +4414,16 @@ function updateInventoryUI(){
   document.getElementById('inv-trt').style.opacity=heldTurrets>0?'1':'0.4';
 }
 
+let hpFullMsgT=null;
+function flashHpFull(){
+  const el=document.getElementById('hpFullMsg');
+  el.style.opacity='1';
+  clearTimeout(hpFullMsgT);
+  hpFullMsgT=setTimeout(()=>el.style.opacity='0',1500);
+}
 function useMedkit(){
-  if(medkits<=0||hp>=100) return;
+  if(medkits<=0) return;
+  if(hp>=100){ flashHpFull(); return; }
   if(activeMutator==='ironman'){ announce('⚠ IRON MAN — NO HEALING'); return; }
   medkits--; hp=Math.min(100,hp+100);
   updateHealthUI(); updateInventoryUI();
@@ -6702,7 +6712,7 @@ function renderUpgradeShopP2(){
 
 // ── SHOP ───────────────────────────────────────────────────
 const SHOP_DEFS = [
-  {name:'HP PACK',      desc:'Restore +50 HP',              cost:800,  fn:()=>{ if(activeMutator==='ironman'){announce('⚠ IRON MAN');return;}hp=Math.min(200,hp+50); updateHealthUI(); if(coopMode&&!p2Downed){ p2hp=Math.min(100,p2hp+50); updateP2HealthUI(); } }},
+  {name:'HP PACK',      desc:'Restore +50 HP',              cost:800,  fn:()=>{ if(activeMutator==='ironman'){announce('⚠ IRON MAN');return;} if(hp>=200){ flashHpFull(); } hp=Math.min(200,hp+50); updateHealthUI(); if(coopMode&&!p2Downed){ p2hp=Math.min(100,p2hp+50); updateP2HealthUI(); } }},
   {name:'SHIELD PACK',  desc:'Restore +50 shield',          cost:800,  fn:()=>{ shield=Math.min(200,shield+50); updateHealthUI(); if(coopMode&&!p2Downed){ p2shield=Math.min(100,p2shield+50); updateP2HealthUI(); } }},
   {name:'DAMAGE UP',    desc:'+1 damage per shot (perm)',    cost:2000, fn:()=>{ permDmgBonus++; }},
   {name:'SPEED UP',     desc:'+0.4 move speed (perm)',       cost:1500, fn:()=>{ permSpeedBonus+=0.4; }},
