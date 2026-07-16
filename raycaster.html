@@ -334,7 +334,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071607';
+const BUILD_VERSION = '2026071608';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -407,8 +407,10 @@ const fsBtn = document.getElementById('fsBtn');
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 let inIframe = true; try{ inIframe = window.self !== window.top; }catch(e){ inIframe = true; }
+const onCrazyGames = /crazygames\.com$/i.test(location.hostname);
 
-if(isStandalone || !touchMode || (isIOS && !hasFsApi && inIframe)){
+if(onCrazyGames || isStandalone || !touchMode || (isIOS && !hasFsApi && inIframe)){
+  // CrazyGames provides its own fullscreen control — a custom one is against their guidelines.
   // Already launched from the home-screen icon (Safari bars are gone) — or not a touch device — no button needed.
   fsBtn.style.display = 'none';
 } else if(hasFsApi){
