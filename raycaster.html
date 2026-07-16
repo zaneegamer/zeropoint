@@ -11,6 +11,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <title>ZEROPOINT</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
@@ -280,6 +281,36 @@ window.addEventListener('unhandledrejection', e=>{
   showFatalError('promise rejection: '+(e.reason&&e.reason.message?e.reason.message:e.reason));
 });
 
+// ── CRAZYGAMES SDK ───────────────────────────────────────────
+// No-ops harmlessly when not running on CrazyGames (window.CrazyGames absent, or
+// SDK.init() rejects/environment is 'disabled' on an unsupported domain like GitHub Pages).
+let cgReady = false;
+(async () => {
+  try {
+    if (window.CrazyGames && window.CrazyGames.SDK) {
+      await window.CrazyGames.SDK.init();
+      cgReady = true;
+      // This game's own asset loading is synchronous (plain canvas/JS, no images/fonts to
+      // await), so by the time this network-bound init() resolves the menu is already built.
+      window.CrazyGames.SDK.game.loadingStart();
+      window.CrazyGames.SDK.game.loadingStop();
+    }
+  } catch (e) { cgReady = false; }
+})();
+function cgGame(){ return cgReady ? window.CrazyGames.SDK.game : null; }
+function cgGameplayStart(){ try{ cgGame() && cgGame().gameplayStart(); }catch(e){} }
+function cgGameplayStop(){ try{ cgGame() && cgGame().gameplayStop(); }catch(e){} }
+function cgShowMidgameAd(){
+  try{
+    if(!cgReady || !window.CrazyGames.SDK.ad) return;
+    window.CrazyGames.SDK.ad.requestAd('midgame', {
+      adStarted: ()=>{ try{ stopAmbient(); stopDangerLayer(); }catch(e){} },
+      adFinished: ()=>{},
+      adError: ()=>{}
+    });
+  }catch(e){}
+}
+
 // ── CANVAS SETUP ───────────────────────────────────────────
 const canvas = document.getElementById('c');
 let ctx = canvas.getContext('2d');
@@ -289,6 +320,13 @@ const HALF_H = H >> 1;
 const touchMode = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 const hasFsApi = !!document.documentElement.requestFullscreen; // true on Android Chrome; false on iPhone Safari (Apple restriction, no JS workaround)
 let gs = 'menu'; // GAME STATE (moved up so it's defined before the initial doResize() call below)
+function setGS(next){
+  const wasActive = (gs==='play'||gs==='aim');
+  const willActive = (next==='play'||next==='aim');
+  if(wasActive && !willActive) cgGameplayStop();
+  else if(!wasActive && willActive) cgGameplayStart();
+  gs = next;
+}
 let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, also read by drawArmedItem()
 
 // ── UPDATE CHECK ───────────────────────────────────────────
@@ -296,7 +334,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071606';
+const BUILD_VERSION = '2026071607';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -4562,7 +4600,7 @@ function nextWave(){
   buildMap(wave); updateAmmoUI(); updateGunUI(); updateInventoryUI();
   waveIntroT=0;
   if(activeGameMode==='extraction'){ gauntletActive=false; gauntletAnimT=0; spawnKeycardAndExtraction(); }
-  gs='intro';
+  setGS('intro');
 }
 
 function playWaveIntroSound(waveNum) {
@@ -4692,7 +4730,7 @@ function drawWaveIntro(){
     }
   }
   ctx.globalAlpha=1; ctx.restore();
-  if(t>=dur){ gs='shop'; openShop(); }
+  if(t>=dur){ setGS('shop'); openShop(); }
 }
 
 function playFootstep() {
@@ -4971,7 +5009,7 @@ function playScream() {
 function pauseGame(){
   if(gs!=='play'&&gs!=='aim') return;
   prePauseGs=gs;
-  gs='pause';
+  setGS('pause');
   document.getElementById('pauseWaveNum').textContent=gs==='aim'?'AIM':wave;
   document.getElementById('pauseOverlay').style.display='flex';
   if(prePauseGs==='aim'){
@@ -4985,7 +5023,7 @@ function pauseGame(){
 
 function resumeGame(){
   if(gs!=='pause') return;
-  gs=prePauseGs;
+  setGS(prePauseGs);
   document.getElementById('pauseOverlay').style.display='none';
   if(gs==='aim'){
     document.getElementById('hud').style.display='none';
@@ -5047,8 +5085,9 @@ document.getElementById('reducedFlashCb').addEventListener('change', e=>{
 });
 
 function gameOver(){
-  gs='over';
+  setGS('over');
   stopAmbient(); stopDangerLayer();
+  cgShowMidgameAd();
   if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   releaseWakeLock();
   jumpscareTimer = 110;
@@ -6861,7 +6900,7 @@ function closeShop(){
     p2gunLevel=gi; p2ammo=g.maxAmmo; pendingGunChoicesP2=[];
   }
   document.getElementById('shopOverlay').style.display='none';
-  gs='play';
+  setGS('play');
   spawnCD=90;
   startAmbient(currentTheme);
   requestGameLock();
@@ -7066,7 +7105,7 @@ function startAimTrainer(){
   startAmbient(currentTheme);
   const cnt=aimTargetCount();
   for(let i=0;i<cnt;i++) spawnAimTarget();
-  gs='aim';
+  setGS('aim');
   document.getElementById('overlay').style.display='none';
   document.getElementById('shopOverlay').style.display='none';
   document.getElementById('pauseOverlay').style.display='none';
@@ -7139,8 +7178,9 @@ function drawAimHUD(){
 }
 
 function aimTrainerEnd(){
-  gs='over';
+  setGS('over');
   stopAmbient(); stopDangerLayer();
+  cgShowMidgameAd();
   if(pointerLocked && document.exitPointerLock) document.exitPointerLock();
   document.getElementById('hud').style.display='';
   document.getElementById('inventory').style.display='';
@@ -7535,7 +7575,7 @@ function rebuildMainMenu(ov){
   document.getElementById('metaBtnM').addEventListener('click', showMetaScreen);
   document.getElementById('dailyBtnM').addEventListener('click', showDailyChallengeScreen);
   if(touchMode) document.getElementById('mobileHelpBtnM').addEventListener('click', showMobileHelpScreen);
-  refreshLeaderboard(); gs='menu';
+  refreshLeaderboard(); setGS('menu');
 }
 
 // ── MOBILE HOW-TO-PLAY ──────────────────────────────────────
@@ -7573,7 +7613,7 @@ function showMobileHelpScreen(){
     <p style="font-size:11px;color:#889;margin-top:14px;max-width:440px">Play in landscape. On iPhone, add ZEROPOINT to your home screen (Safari's Share button) for fullscreen play.</p>
     <button id="mobileHelpBackBtn" style="margin-top:4px;padding:13px 46px;font-size:17px;font-weight:bold;background:linear-gradient(135deg,#0055aa,#00aaff);color:#fff;border:none;border-radius:8px;cursor:pointer;letter-spacing:2px;box-shadow:0 0 20px #00aaff88">GOT IT</button>`;
   document.getElementById('mobileHelpBackBtn').addEventListener('click', ()=>{ rebuildMainMenu(ov); });
-  gs='menu';
+  setGS('menu');
 }
 
 function showDailyChallengeScreen(){
@@ -7646,7 +7686,7 @@ function showCoopInstructions(onContinue){
     <button id="coopInstrBackBtn" style="padding:9px 24px;font-size:11px;background:rgba(255,255,255,0.06);color:#889;border:1px solid #334;border-radius:8px;cursor:pointer;letter-spacing:2px">◀ BACK</button>`;
   document.getElementById('coopInstrContinueBtn').addEventListener('click', onContinue);
   document.getElementById('coopInstrBackBtn').addEventListener('click', ()=>{ rebuildMainMenu(ov); });
-  gs='menu';
+  setGS('menu');
 }
 
 function showGameModeScreen(){
@@ -8308,7 +8348,7 @@ function startGame(){
   buildMap(1);
   if(activeGameMode==='extraction') spawnKeycardAndExtraction();
   startAmbient(currentTheme);
-  gs='play';
+  setGS('play');
   document.getElementById('overlay').style.display='none';
   document.getElementById('shopOverlay').style.display='none';
   document.getElementById('sc').textContent='0';
