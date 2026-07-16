@@ -294,7 +294,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071603';
+const BUILD_VERSION = '2026071604';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
@@ -4450,6 +4450,7 @@ function announce(txt){
 
 // ── WAVE / LIFE ────────────────────────────────────────────
 function updateHealthUI(){
+  hp = Math.min(200, hp);
   document.getElementById('hpFill').style.width = (hp/100*100)+'%';
   document.getElementById('shFill').style.width = (shield/100*100)+'%';
   document.getElementById('hpNum').textContent = hp;
@@ -7467,21 +7468,7 @@ function updateDynEvent(){
   if(--dynEventCd>0) return;
   dynEventCd=700+Math.floor(Math.random()*600);
   const roll=Math.random();
-  if(roll<0.33){
-    let dpx=null,dpy=null;
-    for(let tries=0;tries<10;tries++){
-      const ang=Math.random()*Math.PI*2,dist=3+Math.random()*4;
-      const tx=P.x/CELL+Math.cos(ang)*dist,ty=P.y/CELL+Math.sin(ang)*dist;
-      if(cell(Math.floor(tx),Math.floor(ty))===0){ dpx=tx; dpy=ty; break; }
-    }
-    if(dpx!==null){
-      const types=['medkit','medkit','grenade','ammo','shieldcell'];
-      const tp=types[Math.floor(Math.random()*types.length)];
-      const cvs=tp==='medkit'?pickupCanvases.medkit:tp==='grenade'?grenadePickupCanvas:ammoPickupCanvas;
-      pickups.push({x:dpx*CELL,y:dpy*CELL,type:tp,canvas:cvs,aspect:tp==='medkit'?64/128:32/64});
-      announce('⬇ SUPPLY DROP!');
-    }
-  } else if(roll<0.92){
+  if(roll<0.88){
     spawnHorde();
   } else {
     activeDynEvent={type:'powerout',timer:540};
