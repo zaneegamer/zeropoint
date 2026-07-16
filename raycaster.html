@@ -86,7 +86,7 @@ body.touch-device #healthBars { bottom:calc(150px + env(safe-area-inset-bottom))
 #a2hsTip p { font-size:14px; color:#ccd; max-width:300px; line-height:1.8; margin:0; }
 #a2hsTip .share-ic { font-size:26px; }
 #a2hsTip button { margin-top:6px; padding:10px 30px; font-size:13px; font-weight:bold; background:linear-gradient(135deg,#0055aa,#00aaff); color:#fff; border:none; border-radius:8px; cursor:pointer; letter-spacing:2px; }
-#shopOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.93); z-index:60; display:none; flex-direction:column; align-items:center; justify-content:center; gap:14px; font-family:'Courier New',monospace; }
+#shopOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.93); z-index:60; display:none; flex-direction:column; align-items:center; justify-content:safe center; gap:14px; font-family:'Courier New',monospace; overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action:pan-y; padding:16px 0; }
 #pauseOverlay { position:absolute; inset:0; background:rgba(0,0,0,0.82); z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
 #pauseOverlay h2 { font-size:52px; color:#00ccff; text-shadow:0 0 28px #00ccff; letter-spacing:8px; margin:0; font-family:'Courier New',monospace; }
 #pauseOverlay p { font-size:12px; color:#556; letter-spacing:3px; margin:0; }
@@ -294,7 +294,7 @@ let tcArmedItem=null; // 'med' | 'pot' | 'shc' | 'gren' — mobile-armed item, a
 // Home-screen/standalone launches can hold a stale cached copy of this page far longer
 // than a normal browser tab, so this polls a tiny sibling file for a newer build and
 // offers a one-tap reload instead of silently running outdated code.
-const BUILD_VERSION = '2026071602';
+const BUILD_VERSION = '2026071603';
 let updateBannerShown = false, updateBannerDismissed = false;
 function checkForUpdate(){
   if(!location.protocol.startsWith('http') || updateBannerDismissed || updateBannerShown) return;
